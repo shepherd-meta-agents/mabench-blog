@@ -1,0 +1,16 @@
+---
+title: "MAArena, Part 2: What the Optimizers Actually Do"
+subtitle: "Analysis and findings from running the grid."
+date: "2026-08-06"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, benchmark, analysis]
+draft: true
+---
+
+<!-- Second post — analysis and findings. To be drafted next. -->
+
+## Coming soon
+
+This post will cover the results: which methods lift which agents, where the money
+goes, dev→test overfitting, and what the anytime curves reveal.

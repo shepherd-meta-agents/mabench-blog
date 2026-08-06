@@ -1,0 +1,341 @@
+---
+title: "MAArena, Part 1: Benchmarking the Optimizer, Not the Agent"
+subtitle: "The setup and protocol behind a benchmark for meta-optimization methods."
+date: "2026-08-05"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, benchmark, protocol]
+bibliography: references.bib
+---
+
+> **TODO before publishing:** author list, links to the code/paper, the exact base
+> model and dataset sizes, and a headline figure (an anytime curve). This draft is
+> grounded in the repository docs (`docs/benchmark_taxonomy.md`,
+> `docs/framework_v2_design.md`, `docs/feedback_contract.md`); numbers and names are
+> faithful to the current `mab2` framework.
+
+## The question one level up
+
+Almost every agent benchmark asks the same question: *how good is this agent — or
+this base model — at task τ?* You fix a task suite, you swap in agents or models,
+and you read off a leaderboard.
+
+MAArena asks a different question, one level up:
+
+> **Given a fixed seed agent and a fixed budget, can a _method_ improve that
+> agent's held-out pass rate — and is the gain worth what it cost?**
+
+The unit of evaluation is not the agent and not the base model. It is the
+**meta-optimizer**: the procedure that takes an agent and tries to make it better —
+by editing its prompts, rewriting its code, evolving its workflow, or letting it
+rewrite itself. GEPA, AFlow, AdaEvolve, Meta-Harness, a raw coding-agent session,
+a self-improving Gödel-machine-style loop: these are the things under test. The
+agent they operate on is held fixed so that **the method is the only variable.**
+
+This reframing is the whole point. There is a fast-growing literature of
+"self-improving," "agent-optimizing," and "meta-agent" methods, each reporting
+gains on its own agent, its own task, its own budget. Those numbers are not
+comparable. MAArena fixes the agent, the task carrier, the budget, and the scoring
+so that a claim like *"method M lifts this agent by Δ at this cost"* means the same
+thing across methods.
+
+## The headline number: Δ-over-seed, cost-regularized
+
+Every run reports a **Δ-over-seed** — the improvement the method achieves over the
+agent it started from, measured on a sealed test split:
+
+$$
+\text{score}(\text{method}) \;=\; \text{test\_pass\_rate}\big(\text{method.best()}\big)
+\;-\; \text{test\_pass\_rate}(\text{seed}).
+$$
+
+The seed agent's own sealed-test pass rate is the **null baseline** — the floor
+that does nothing. This has two immediate consequences:
+
+- **The seed is the floor.** We report the *lift*, not the absolute pass rate. A
+  benchmark cell where the untouched seed already wins is a bad cell — the method
+  had no room to help.
+- **The gain is never reported alone.** It is always paired with what it consumed.
+  The headline artifact is not a scalar but an **anytime curve**: best-so-far
+  sealed-test score plotted against ledger spend (dollars, tokens, rollouts,
+  wall-clock). A method that buys two points of accuracy for \$0.80 and a method
+  that buys three points for \$150 are telling very different stories, and the
+  curve shows both.
+
+Cost-regularization is a first-class design principle, not a footnote. Sample
+efficiency — how much data and money a method needs to climb — is a scored axis.
+
+## How a run is specified
+
+A single run is a point in a small, explicit configuration space:
+
+```
+   run  =  ( BENCHMARK ,  SEED ,  METHOD ,  BUDGET + RNG )
+            the carrier    the worker   the         resource
+            + its harness   optimized    optimizer   envelope
+```
+
+| Axis | What it varies |
+|---|---|
+| **Benchmark** | the carrier task suite and its harness / modality |
+| **Seed** | the worker agent (a launchable `agent/` tree) being optimized |
+| **Method** | the meta-optimizer under test |
+| **Budget + seed** | the ledger cap and the RNG seed |
+
+Because the *same* method runs across benchmarks and seeds, a result is never a
+single conflated number. It is always "method M lifts *this seed* on *this carrier*
+by Δ at *this cost*." The rest of this post walks each axis, then the protocol that
+binds them.
+
+## The carriers: four benchmarks
+
+The task suites are the ground the methods stand on. Each ships its data and is
+scored by a trusted, benchmark-owned harness.
+
+| Benchmark | Modality | Scoring |
+|---|---|---|
+| **gpqa** | one-shot graduate-level science multiple-choice QA | exact-choice: the worker emits a final `(X)` option letter |
+| **charxiv** | multimodal chart QA (chart image + question) | a faithful-reasoning judge over the worker's `Answer:` line |
+| **tau2** | interactive tool-use with a simulated user (customer-service dialog) | the τ²-bench task verifier over the full dialog |
+| **tb2** | launchable terminal / sysadmin / coding tasks in Docker | a task verifier that runs *inside* the container |
+
+These four span a deliberate spectrum:
+
+- **gpqa** and **charxiv** are the **one-shot form** — the runner feeds an instance
+  and reads an answer. charxiv is the suite's multimodal member (a vision-capable
+  worker reads the chart).
+- **tau2** and **tb2** are the **launchable-agent form** — the worker is a program
+  the runner launches against a disposable environment (a simulated dialog, a
+  Harbor/Docker container) over a fixed action channel. Here the environment and
+  the verifier are benchmark-owned and trusted, and the *worker itself* makes
+  metered LLM calls, tracked separately from the method's own calls.
+
+Every benchmark shares **one** metered runner, **one** ledger, and **one** sealed
+test, which is what makes cost comparisons hold *across* benchmarks and not just
+within one.
+
+## The workers: five seeds per benchmark
+
+For each benchmark, MAArena ships **five seed agents** — one base plus four
+literature-pattern variants — each a launchable `agent/` tree that satisfies the
+benchmark's I/O contract.
+
+| Benchmark | base seed | variant seeds |
+|---|---|---|
+| **gpqa** | `gpqa` (chain-of-thought) | Program-of-Thoughts · multi-agent debate · self-refine · Tree-of-Thoughts |
+| **tau2** | `tau2` (ReAct) | plan-then-act · ReWOO · reflect/self-correct · scratchpad memory |
+| **charxiv** | `charxiv` (direct/CoT VLM) | PoT-over-table · crop-zoom re-query · draft→verify→revise · K-sample self-consistency |
+
+The seed roster is the **abstraction axis** of the experiment: each variant is a
+minimal, faithful abstraction of a technique from the agent literature, and each
+exposes a *different* edit surface. A method's lift therefore has to generalize
+across agent *shapes*, not just squeeze one hand-picked pipeline. Each seed also
+ships a small multi-rep baseline pass rate — the floor its Δ is measured against.
+
+## The optimizers: the roster, on a coupling × surface grid
+
+The methods are the actual subject of the benchmark. The current roster:
+
+| Method | What it is |
+|---|---|
+| **GEPA** | reflective genetic-Pareto prompt search over the declared prompt surface [@gepa] |
+| **AFlow** | MCTS search over agentic workflows-as-code (graph + prompts) [@aflow] |
+| **AdaEvolve** | adaptive multi-island evolutionary program search with a pluggable fitness [@adaevolve] |
+| **Meta-Harness** (`mh_paper`) | a coding-agent proposer with unrestricted access to the full search history — prior source, scores, raw traces — Pareto-selected [@mh] |
+| **coding_agent** | the unstructured coding-agent baseline: one long-lived session editing the agent in place, self-stopping on plateau or budget |
+| **HGM** | endogenous / self-improving: the agent proposes its own successor via its own `self_improve.py` |
+| **prompt_hill** | a walking-skeleton method that hill-climbs the system prompt via failure-driven edits |
+
+To make sense of a roster this heterogeneous, MAArena classifies each method on two
+independent axes.
+
+**Surface — what medium the method edits:**
+
+- *prompt surface*: the seed's tunable text, declared in `agent/PROMPTS.json`.
+  Prompt-optimizers share one declared surface per benchmark, which is what makes
+  their comparison fair.
+- *whole-program*: the entire `agent/` tree — pipeline code, control flow, workflow
+  graph, and parameters.
+
+**Coupling — how bound the optimizer is to the agent it optimizes:**
+
+- *agnostic / seed-transforming*: takes an arbitrary seed and returns an improved
+  agent of the same kind. Directly comparable on a shared seed.
+- *agent-native, exogenous*: the optimizer owns the agent's *representation* (a
+  workflow graph, a program archive) and is anchored to its own genesis; the output
+  is the method's own artifact, not the seed transformed.
+- *agent-native, endogenous*: the optimizer **is** the worker — it rewrites its own
+  source.
+
+Populated with the roster:
+
+| coupling ╲ surface | **prompt** | **whole-program** |
+|---|---|---|
+| **agnostic / seed-transforming** | GEPA · prompt_hill | Meta-Harness · coding_agent |
+| **agent-native · exogenous** | — | AFlow · AdaEvolve |
+| **agent-native · endogenous** | — | HGM |
+
+Coupling is the load-bearing distinction: *does the method's output stay in the
+seed's representation, or move into the method's own?* Seed-transforming methods
+run on the shared seed grid and are compared head-to-head on Δ-over-seed.
+Agent-native methods carry their own genesis, so they are still scored by
+Δ-over-seed on the shared dataset at a cost, but they do not sweep a foreign seed
+grid — comparing them to prompt-tuners on "who edits the same prompt best" would be
+a category error.
+
+## The protocol: freedom inside, discipline at the boundary
+
+Here is the design decision that makes the rest work. A meta-optimizer is a wildly
+varied thing — a Python search loop, a coding-agent session, a shell pipeline, a
+self-modifying program. If the benchmark forced all of them through a rigid
+`optimize()` API with a mandated candidate format and a fixed feedback string, two
+things would break: faithful re-hosting of published methods, and the freedom those
+methods need to do what they actually do.
+
+So MAArena inverts the usual contract. **The method is free inside its workspace;
+the discipline lives entirely at the boundary.**
+
+### The workspace
+
+Each run gets a workspace and is otherwise unconstrained:
+
+```
+workspace/
+  agent/      # THE worker to improve — the method maintains its current best here,
+              # in place. This exact directory faces the sealed test at run end.
+  versions/   # framework-written archive of every registered version (one per subdir)
+  train/      # the train split, as the dataset ships it
+  logs/       # rollout results from the method's train calls land here
+  ...         # anything else the method wants: scratch, archives, its own tools
+```
+
+There is **no `build()`**, no mandated candidate format, no fixed event
+vocabulary, and no separate submission directory. The submission *is* `agent/`, in
+place. Versions enter the version graph (a `commons-vcs` store) through three
+triggers — an evaluation observing the directory, a voluntary `register` hook, or a
+`stamp` checkpoint — never on raw file writes.
+
+### The trusted runner: three endpoints, one disclosure ladder
+
+All the discipline is concentrated in a single trusted, host-side runner service
+that owns Docker, the graders, and the held-out splits. It exposes three
+budget-metered endpoints at three levels of disclosure, plus a free meter read:
+
+| Endpoint | Returns | Disclosure |
+|---|---|---|
+| `run_train(agent, task_ids, trajectory=k)` | per-task observations **including the gold** | **full** |
+| `score_dev(agent, n?, reps?)` | one scalar, nothing else | **scalar-only** |
+| `score_test(agent)` | framework-invoked only; never returned to the method | **sealed** |
+| `spend()` | read-only view of the method's own meter | free |
+
+This is the **disclosure ladder**, and its integrity is *physical, not
+contractual*. Held-out data never crosses the boundary, so there is nothing for a
+method to leak: dev returns a bare float; test is never returned at all. There is
+no "strict mode" a method must promise to honor — the channel simply does not
+carry per-instance dev or test data. Test is scored by the framework, on the
+method's stamped checkpoints, after the run.
+
+### What a method actually observes
+
+When a method calls `run_train`, each per-task record carries **two independent
+facets**:
+
+1. **The dataset verdict** (owned by the grader): the task input, the worker's
+   answer, a `passed`/`score`/`exit_status` core, and a *structured* `detail`
+   verdict with a `kind` discriminator (`qa`, `dialog`, `terminal`) so a method
+   reads the keys it understands. Grading is always terminal, never per-turn.
+2. **The worker trajectory** (owned by the log): the last *k* turns reconstructed
+   into a **uniform** shape — the same on every benchmark —
+   `{turn_idx, actor, message, reasoning, actions, observations, error}`, plus a
+   grep-able path to the full raw trace.
+
+The split matters because a harness is a *(dataset × worker-agent)* pairing: the
+verdict's shape is dataset-determined, the trajectory's shape is
+I/O-contract-determined. Because the verdict is self-describing and the trajectory
+is uniform, a method needs *one* generic renderer, not one per dataset. Different
+methods consume different facets — Meta-Harness greps raw traces, GEPA folds a few
+reconstructed turns into its reflection step, a coding-agent may ignore both and
+build its own instruments from the raw `train/` data. *Which* signal a method reads
+is itself a research observable we record.
+
+## The comparison spine: one ledger, one sealed score
+
+Cross-method comparison rests on exactly three things: **worker versions × ledger
+spend × official sealed scores**. Nothing else.
+
+The **ledger** is the meta-economy record. It folds in real time — advancing on
+every LLM call and every rollout, never in post-hoc batches — and attributes spend
+*per actor*: the method's own calls (`meta`) are tracked separately from the calls
+the worker agent makes while being evaluated (`worker`). It tracks per-actor tokens
+(in/out/cache), dollars (provider-reported where available), rollouts, endpoint
+calls by type, and wall-clock. Crucially, **dev checks are metered against the
+method's budget** — checking held-out performance is a strategic spend, which both
+reflects reality and economically bounds the "hammer dev until it climbs"
+degeneracy.
+
+The **anytime curve** is built from `stamp` checkpoints. A `stamp` freezes the
+ledger reading and registers the current `agent/` in the version graph; those
+checkpoints are what the framework hidden-tests post-hoc. The plotted curve is
+therefore *(spend-at-stamp × sealed-test score)*, best-so-far. A method that never
+stamps still gets an automatic run-end "final" stamp, so every run yields at least
+one curve point. The best-by-dev version is kept as a free *diagnostic* (the gap
+between final and argmax-dev tells you about selection quality) but is never the
+official number.
+
+A deliberate consequence of "standardize outcomes, not processes": **method
+interiors are never compared as metrics.** One method emitting rich Pareto-frontier
+events and another emitting nothing is a difference in *color*, not a difference in
+*score*. Comparing on interior richness would just reward whoever instrumented more
+— so the ledger spine, and only the ledger spine, carries the comparison.
+
+## Two commitments that protect validity
+
+**Faithfulness.** The vendored optimizers run through their own sanctioned seams
+with zero source edits — a run with no overrides reproduces the published method.
+Methods select candidates with their *native* mechanism; `dev` is an *optional*
+scalar check, not a mandated selection gate, and only `test` is ever sealed. The
+goal is that MAArena measures the method as its authors built it, not a
+benchmark-flavored reinterpretation of it.
+
+**Isolation.** The method process runs jailed, with its workspace as the sole
+writable root, because it executes LLM-authored code against a harness that owns
+the answer key — for a benchmark, sandbox escape is a *validity* problem
+(reward-hacking the scorer), not only a safety one. Where the jail cannot be
+applied, the downgrade is recorded loudly and visibly, so it can never masquerade
+as a clean run. (Docker-based benchmarks are a known containment gap, tracked
+openly and excluded from adversarial runs until closed.)
+
+## Why these choices, together
+
+Step back and the pieces form one argument:
+
+1. **Cost-regularized** — a gain is nothing without its price, so the anytime curve,
+   not a scalar, is the deliverable.
+2. **Sample efficiency is first-class** — every rollout, dev checks included, is
+   metered, so data appetite is scored.
+3. **Faithful methods** — vendored engines run through native seams with native
+   selection, so we measure the real method.
+4. **The seed is the floor** — the headline is Δ-over-seed, not absolute accuracy.
+5. **Reproducibility via multi-seed + CI** — agent rollouts are nondeterministic
+   (the executor rejects `temperature=0` and can flip pass↔fail on re-run), so the
+   intended reading is always multi-seed with confidence intervals, never a single
+   number.
+6. **One shared contract** — one metered runner, one ledger, one sealed test, so
+   cross-benchmark cost comparison actually holds.
+
+Freedom inside the workspace lets any method be itself; discipline at the boundary —
+the disclosure ladder, the per-actor ledger, the sealed test — is what makes their
+results mean the same thing.
+
+## What's next
+
+That is the *setup*: the question, the axes, the carriers, the seeds, the roster,
+and the protocol that scores them all on one spine. The **second post** turns to the
+*findings* — what happens when you actually run this grid: which methods lift which
+agents, where the money goes, how badly dev overfits test, and what the anytime
+curves reveal that a leaderboard hides.
+
+---
+
+*This post describes the `mab2` framework in the MAArena / MA-bench repository.
+Corrections and pointers to the code are welcome.*

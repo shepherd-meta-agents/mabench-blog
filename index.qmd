@@ -1,0 +1,13 @@
+---
+title: "MAArena"
+subtitle: "A benchmark for meta-optimizers — methods that improve a fixed agent."
+listing:
+  contents: posts
+  sort: "date desc"
+  type: default
+  categories: true
+  fields: [date, title, subtitle, reading-time]
+---
+
+Two-post series on **MAArena**: the first covers the setup and protocol; the
+second covers the analysis and findings.
