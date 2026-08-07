@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """Concept figure for the Part-1 lede: performance over (parameter, program)
 space. The field's historical trajectory hugs the parameter wall with
-flattening returns; the program-space direction is the open, now-automatable
-axis. Regenerate: .venvs/blogfigs/bin/python make_two_axes.py"""
+flattening returns; the program-space direction only opens up once the model
+is capable enough — below that threshold, harness search buys little.
+Regenerate: ~/.venvs/blogfigs/bin/python make_two_axes.py"""
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
-# performance landscape: strong-but-saturating in params, modest-but-open in program
+# performance landscape. The harness term is *gated* by model capability:
+# a weak model gets almost nothing from program-space search; near the
+# frontier the same search buys a lot.
+def gate(p):
+    return 0.05 + 0.95 / (1 + np.exp(-9 * (p - 0.62)))
+
 def perf(p, h):
-    return 0.62 * (1 - np.exp(-2.6 * p)) + 0.30 * (1 - np.exp(-1.8 * h)) * (0.35 + 0.65 * p)
+    return 0.62 * (1 - np.exp(-2.6 * p)) + 0.34 * (1 - np.exp(-2.2 * h)) * gate(p)
 
 fig = plt.figure(figsize=(8.6, 6.2))
 ax = fig.add_subplot(111, projection="3d")
@@ -43,6 +49,16 @@ ax.quiver(0.93, 0.66, perf(0.93, 0.66) + 0.004,
           color="#c2571a", lw=3.0, arrow_length_ratio=0.32, zorder=6)
 ax.text(0.97, 0.62, perf(0.93, 0.62) + 0.10, "harness search\n(open, cheap —\nnow automatable)",
         color="#c2571a", fontsize=10, ha="left", zorder=7)
+
+# contrast: the same program-space walk from a below-threshold model — flat
+h_flat = np.linspace(0.03, 0.78, 60)
+p_flat = np.full_like(h_flat, 0.30)
+ax.plot(p_flat, h_flat, perf(p_flat, h_flat) + 0.010, color="#5b6470", lw=2.6,
+        ls=(0, (2, 2)), zorder=6)
+ax.scatter([0.30], [0.03], [perf(0.30, 0.03) + 0.012], color="#5b6470", s=26,
+           depthshade=False, zorder=6)
+ax.text(0.30, 1.02, perf(0.30, 0.78) + 0.10, "same search,\nweaker model:\nlittle to gain",
+        color="#5b6470", fontsize=9.5, ha="center", zorder=7)
 
 ax.set_xlabel("parameter space\n(model: pretraining, RL, post-training)", fontsize=10, labelpad=10)
 ax.set_ylabel("program space\n(harness: prompts, workflow, tools)", fontsize=10, labelpad=10)

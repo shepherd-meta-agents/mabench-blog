@@ -24,8 +24,10 @@ inside.<!-- TODO: pin a real number here — SWE-bench leaderboard spread for a
 fixed model across scaffolds is the obvious citation -->
 
 ![The two axes. Progress so far has climbed the parameter wall — a training
-run per step, flattening returns. The program-space direction is open,
-cheap, and — as of roughly now — searchable by machine.](figures/two_axes.png){#fig-two-axes width=88%}
+run per step, flattening returns. The program-space direction is open, cheap,
+and — as of roughly now — searchable by machine. The gate is model capability:
+run the same harness search from a weaker model (gray) and there is little to
+gain.](figures/two_axes.png){#fig-two-axes width=88%}
 
 Until recently, program space was searched by hand, which is to say barely:
 harness design is a high-dimensional, gradient-free search problem, and humans
@@ -53,10 +55,10 @@ baselines appear at all, its own reimplementation of the competition. The
 numbers never meet. A field that cannot compare its methods cannot tell whether
 it is making progress.
 
-![What comparison under one protocol looks like — an early sweep of sixteen
+![What comparison under one protocol looks like — an early sweep of thirteen
 optimizers on BBH-hard, same seed agent, same budget meter. Ranks reorder as
 budget grows; a leaderboard is just the right-hand edge of this
-plot.](figures/anytime_curve_bbh.png){#fig-anytime-bbh width=95%}
+plot.](figures/anytime_curve_bbh_named.png){#fig-anytime-bbh width=100%}
 
 MABench is our attempt at the measuring stick. It runs agent-optimization
 methods — vendored verbatim, never reimplemented — against the same seed
