@@ -118,6 +118,20 @@ between two single runs is noisy at sd ≈ 0.03, and a claimed lift needs to
 reach **~0.06 — six points — to clear two sigma**. Many published
 agent-optimization gains are smaller than that.
 
+This is not a quirk of our setup; the field is converging on the same
+diagnosis. Gupta et al. [@nouniversalharness] ran 30 budget-matched harness
+variants across 12 model–problem pairs — over three million rollouts — and
+concluded that discovery harnesses "are often compared using too few
+independent trials to distinguish key methodological improvements from
+run-to-run variance"; once trials are repeated and hypothesis-tested, no
+fixed harness comes out reliably superior. HarnessOpt-Bench
+[@harnessoptbench] hits the same wall from the benchmark side: across 111
+scored runs, measured gains vary substantially with task and seed regime.
+And when the `optimize_anything` team put three optimizers under one matched
+budget [@omni], the win column split 3–3–4 across ten tasks — even with noise
+controlled, the winner flips task by task, so a comparison on one task and
+one run supports almost nothing.
+
 The only honest response is repetition. Every cell in our grid is run as
 multiple independent repeats, and lifts are reported against the measured
 floor, not against a single lucky run:
