@@ -69,13 +69,22 @@ happened when we ran it.
 
 ## Anatomy of a run
 
-A run hands the method three things: a copy of the seed agent, a workspace,
-and a budget. Inside the workspace it can do whatever it likes — rewrite the
-agent's prompt, restructure its workflow, edit its source, spawn its own LLM
-calls to think with. We deliberately impose no structure on the search loop.
-The method owns its loop; the framework owns everything that has to be
-common for the comparison to mean anything: identity, scoring, budget, and
-metering.
+The fixed point of every run is the thing being improved: a **seed agent
+paired with a dataset** — a bare one-shot prompt on GPQA-Diamond, a
+tool-using scaffold on a terminal benchmark. That pairing is the ground truth
+of the evaluation; it never varies within a comparison. What varies is the
+thing under test: an **optimization method running on a model**, handed a copy
+of the seed and a budget and left alone with it. The method can do whatever it
+likes to the agent — rewrite its prompt, restructure its workflow, edit its
+source, spawn its own LLM calls to think with. We deliberately impose no
+structure on the search loop. The method owns its loop; the framework owns
+everything that has to be common for the comparison to mean anything:
+identity, scoring, budget, and metering.
+
+Each run produces one core result: **how far the method lifted the seed's
+sealed test score, and what it spent to get there** — Δ over seed, priced,
+traced out over the whole budget as an anytime curve. Every mechanism in the
+rest of this section exists to make that one number trustworthy.
 
 All of that passes through four endpoints, and the design is in what each one
 is allowed to reveal — a disclosure ladder:
@@ -96,26 +105,66 @@ is deliberately starved down to a number that costs budget to look at, and
 test feedback doesn't exist at all. A method cannot overfit what it never
 sees.
 
-Two more pieces of bookkeeping do most of the benchmark's work. First, the
-**stamp**: whenever the method believes it has a new best candidate, it says
-so. Each stamp is recorded with the spend at that moment, and the stamped
-candidates are scored — later, by us, on the sealed test split. The sequence
-of (spend, test score) points *is* the anytime curve; the method never grades
-itself. Second, the **per-actor ledger**: every token in the run is metered
-and attributed either to the meta-agent (the optimizer thinking) or to the
-workers (the agent doing tasks). The split matters — two methods with the same
-total spend can be doing completely different things with it, and Part 2 shows
-exactly that.
+Everything the method does is recorded, in two structures. The first is the
+**candidate graph**: every agent version the method builds is stored
+content-addressed with a pointer to its parent, so a run leaves behind the
+full genealogy of the search — which edits were tried, from where, and what
+each scored.
+
+![One run's candidate graph. Every node is an agent version the method built
+(colored by dev score), every edge one edit of a parent. The blue path is the
+lineage of the final best candidate — the part of the search that
+mattered.](figures/candidate_dag.png){#fig-cdag width=95%}
+
+The second is the **run record**: every endpoint call, every proposal, every
+accept/reject decision, and every token — metered and attributed per actor,
+to the meta-agent (the optimizer thinking) or to the workers (the agent doing
+tasks). That split matters: two methods with the same total spend can be doing
+completely different things with it, and Part 2 shows exactly that.
+
+![The run record, as our visualizer renders it: event counts
+(propose / evaluate / snapshot / decide), the cost decomposition
+— rollouts, agent vs. optimizer tokens, dollars — and a per-decision audit
+trail with the scores each decision saw.](figures/meta_trace_card.png){#fig-trace width=100%}
+
+On top of this record sits the **stamp**, the one thing the method itself
+declares: whenever it believes it has a new best candidate, it says so. Each
+stamp freezes the ledger reading at that moment, and the stamped candidates
+are scored — later, by the framework — on the sealed test split. The sequence
+of (spend-at-stamp, test score) points *is* the anytime curve. The method
+never grades itself.
+
+## The noise floor
+
+There is one more thing a benchmark of optimizers has to face squarely:
+this field is noisy in a way most benchmarks are not. The workers are
+stochastic, the optimizer is stochastic, and even *scoring is* — re-score a
+frozen, unchanged agent on the same sealed split and 20–40% of the items flip
+their verdict between repetitions. We measured this directly by re-scoring
+seed agents three times under identical conditions: the run-to-run standard
+deviation of a single test score is **0.021**. That means the difference
+between two single runs is noisy at sd ≈ 0.03, and a claimed lift needs to
+reach **~0.06 — six points — to clear two sigma**. Many published
+agent-optimization gains are smaller than that.
+
+The only honest response is repetition. Every cell in our grid is run as
+multiple independent repeats, and lifts are reported against the measured
+floor, not against a single lucky run:
+
+![Repetition is what turns six points of required lift into three. Blue: the
+uncertainty of a reported score at N repeats. Orange: the smallest lift
+distinguishable from noise at 2σ. The 1- and 3-rep bars are anchored by the
+floor-repeat measurement; 5-rep is the √N
+extrapolation.](figures/noise_floor.png){#fig-noise width=88%}
 
 When the budget runs out, the run is over. What survives is everything the
-comparison needs and nothing the method can spin: the stamped candidates, the
-curve, the ledger, and a trace of every call the method made along the way.
+comparison needs and nothing the method can spin: the candidate graph, the
+stamped curve, the ledger, the full trace — and a floor measurement that says
+how big a lift has to be before it means anything. That is the protocol. What
+happened when we pointed it at real methods is Part 2.
 
-## Where the next section goes
-
-<!-- Next sections, in the order we'll draft them:
+<!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
      - The grid (carriers · seeds · methods on the coupling × surface axes)
-     - What can go wrong (jail / reward-hacking, dev→test gap, noise floor,
-       construct validity)
-     - Where this sits (NAS-Bench / HPOBench lineage; pointer to Part 2) -->
+     - Validity beyond noise (jail / reward-hacking, dev→test gap, construct validity)
+     - Where this sits (NAS-Bench / HPOBench lineage) -->
