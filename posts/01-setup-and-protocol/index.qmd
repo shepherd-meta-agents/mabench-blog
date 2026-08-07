@@ -238,8 +238,7 @@ axis: mean Δ over the measured floor — AdaEvolve **+0.043** · GEPA
 the third decimal, to what the untouched seed scored on its own re-run.
 **Right**, the meta-model axis: every run in this slice used `opus-4.8`
 as the meta-agent, so the axis has exactly one measured value (the pooled
-Δ across all floored cells); the other tiers the harness is plumbed for
-are queued, not run.
+Δ across all floored cells); the other planned tiers are queued, not run.
 :::
 
 Read this against the section above. AdaEvolve leads at +0.043, and its
