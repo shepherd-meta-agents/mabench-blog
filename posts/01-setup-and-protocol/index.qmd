@@ -226,11 +226,21 @@ core result is one number per method: mean Δ over the *measured* floor,
 averaged settings-first so GPQA's three repeats don't outvote single-run
 cells.
 
-![The method axis, after $150 of search per cell: mean lift over the
-measured floor. AdaEvolve **+0.043** · GEPA **+0.018** · Meta-Harness
-**+0.017** · AFlow **−0.008** — identical, to the third decimal, to what
-the untouched seed scored on its own
-re-run.](figures/method_delta.png){#fig-method-delta width=72%}
+::: {#fig-first-slice layout-ncol=2}
+
+![The method axis: mean lift per method.](figures/method_delta.png){#fig-method-delta}
+
+![The model axis: one measured point, the rest reserved.](figures/model_axis.png){#fig-model-axis}
+
+Two axes of the grid after $150 of search per cell. **Left**, the method
+axis: mean Δ over the measured floor — AdaEvolve **+0.043** · GEPA
+**+0.018** · Meta-Harness **+0.017** · AFlow **−0.008**, identical, to
+the third decimal, to what the untouched seed scored on its own re-run.
+**Right**, the meta-model axis: every run in this slice used `opus-4.8`
+as the meta-agent, so the axis has exactly one measured value (the pooled
+Δ across all floored cells); the other tiers the harness is plumbed for
+are queued, not run.
+:::
 
 Read this against the section above. AdaEvolve leads at +0.043, and its
 best cell — +0.053 on GPQA — is the one lift in the slice that approaches
@@ -244,16 +254,9 @@ of the first slice: **one method produces a lift big enough to take
 seriously, two produce lifts the noise could have produced, and one
 produces nothing the seed didn't already have.**
 
-![The same runs, cell by cell: final sealed test score per method per
-setting, against the floor repeats (black dashes). Left: the sweep grid,
-one run per cell — unfinished cells are simply absent. Right: the GPQA
-minimal cell at three repeats per method. The bars barely clear the
-dashes — that closeness *is* the finding, and it is invisible in a
-benchmark that doesn't measure its floor.](figures/method_bars.png){#fig-method-bars width=100%}
-
 Two caveats, stated rather than buried. The grid is unbalanced — some
 cells are still running, some crashed, and both TB2 cells lack a measured
-floor, so they appear in the per-cell view but contribute nothing to the
+floor, so they contribute nothing to the
 Δ average. And every number above is one $150 run (three on GPQA), so
 this section will be re-cut as reps accumulate. What it already shows is
 the shape of the field at this budget: gains exist, they are small, and
