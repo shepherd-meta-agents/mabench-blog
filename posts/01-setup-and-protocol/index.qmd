@@ -67,6 +67,47 @@ tasks, seeds, and budgets. This post explains the protocol: what a run is, what
 gets measured, and why we made the design choices we did. Part 2 reports what
 happened when we ran it.
 
+## Taxonomy of meta-optimization
+
+At first glance the methods have nothing in common. A prompt evolver mutates
+strings; a workflow searcher grows a graph; a self-improving agent edits its
+own source and becomes its own successor. Two axes are enough to locate every
+published method — and once placed, methods that looked incomparable become
+rows of the same table.
+
+**Surface** is what medium the method edits. *Context* methods change what
+the agent reads — prompts, skills, memories — and leave the code alone.
+*Program* methods change what the agent is — source, control flow, the
+workflow graph itself.
+
+**Coupling** is how bound the optimizer is to the agent it optimizes.
+*Agnostic* methods take an arbitrary seed agent and hand back that same
+agent, improved — the output stays in the seed's representation. *Exogenous*
+methods are separate designers that own their own representation: ADAS or
+AFlow output their own graph artifact, anchored to their own genesis, not
+your seed transformed. *Endogenous* methods **are** the agent — it rewrites
+itself, so every accepted edit also upgrades the thing doing the editing.
+
+| coupling ↓ · surface → | **context** — prompts · skills · memories | **program** — code · control flow · graphs |
+|---|---|---|
+| **agnostic** — works on any seed agent | prompt optimization: GEPA · TRIPLE · CAPO | coding-agent search: Meta-Harness · CRO · AdaEvolve |
+| **exogenous** — a separate designer, its own representation | *open cell — no published method* | automated agent design: ADAS · GPTSwarm · AFlow · MaAS |
+| **endogenous** — the agent rewrites itself | self-evolving skills & memory: Hermes | self-evolving agents: DGM · HGM · SICA · STOP · Gödel-Agent |
+
+: Every published family lands in one cell. {#tbl-taxonomy}
+
+Two things fall out of this table. The small one: a cell is empty — as far
+as we can tell, no published method searches the context surface from an
+exogenous designer's seat. The taxonomy is not just a filing system; an
+empty cell is a research direction. The load-bearing one: **coupling
+determines what a fair comparison even is.** An agnostic method can be
+dropped onto any seed in a grid and scored on how far it lifted that seed.
+An agent-native method — exogenous or endogenous — carries its own genesis:
+you can score its artifact against the same seed floor on the same dataset,
+but sweeping it across foreign seeds is meaningless. A protocol that
+ignores this ends up grading a graph-grower on a test only prompt-rewriters
+can take. Ours is built around it.
+
 ## Anatomy of a run
 
 The fixed point of every run is the thing being improved: a **seed agent
@@ -80,6 +121,26 @@ source, spawn its own LLM calls to think with. We deliberately impose no
 structure on the search loop. The method owns its loop; the framework owns
 everything that has to be common for the comparison to mean anything:
 identity, scoring, budget, and metering.
+
+| Carrier | The task | Seed agents (base + literature-pattern variants) | Seed baselines (5-rep) |
+|---|---|---|---|
+| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT · Program-of-Thoughts · multi-agent debate · self-refine · Tree-of-Thoughts | 0.58 · 0.61–0.69 |
+| **τ²-bench** | tool-use dialog against a simulated user | ReAct · plan-then-act · ReWOO · reflect · memory-scratchpad | 0.33 · 0.31–0.39 |
+| **CharXiv** | multimodal chart QA | direct VLM · PoT over the extracted table · crop-zoom re-query · draft→verify→revise · self-consistency | 0.51 · 0.50–0.68 |
+| **Terminal-Bench-2** | terminal / coding tasks in containers | launchable terminal agent (seed grid in progress) | — |
+
+: The current grid. Each carrier ships a base seed plus four variants, each
+abstracting one design pattern from the literature; every seed is a
+launchable agent tree paired to a matched data split, with its baseline
+measured over five repetitions. {#tbl-suite}
+
+The variants are the point, not decoration: each exposes a different edit
+surface — a debate seed has roles to retune, a PoT seed has code to fix, a
+tree-search seed has a policy to steer — so a method's lift has to
+generalize across agent shapes rather than fit one. And the seed floors are
+not flat: on GPQA the five seeds already span 0.58 to 0.69 before any
+optimizer touches them, which is why every result is Δ over *its own* seed,
+never over a pooled baseline.
 
 Each run produces one core result: **how far the method lifted the seed's
 sealed test score, and what it spent to get there** — Δ over seed, priced,
@@ -157,7 +218,6 @@ happened when we pointed it at real methods is Part 2.
 
 <!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
-     - The grid (carriers · seeds · methods on the coupling × surface axes)
      - Validity beyond noise (jail / reward-hacking, dev→test gap, construct validity)
      - Where this sits (NAS-Bench / HPOBench lineage)
      Parked from an earlier draft (may return as a protocol-details section):
