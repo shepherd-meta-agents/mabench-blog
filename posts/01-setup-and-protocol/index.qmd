@@ -9,19 +9,54 @@ bibliography: references.bib
 draft: false
 ---
 
-<!-- SKELETON. Notes under each header are content bullets to expand, not prose.
-     An earlier full-prose draft is in git history if we want to salvage lines. -->
+<!-- SKELETON below the lede. Notes under each header are content bullets to
+     expand, not prose. An earlier full-prose draft is in git history. -->
 
-## Every optimizer paper grades its own homework
+There are roughly two ways to make an agent better. You can improve the model —
+pretraining, RL, post-training of every flavor — or you can improve the
+*program* wrapped around it: the prompts, the workflow, the tools, the
+scaffold. Call them parameter space and program space. Parameter space is where
+the headline gains come from, but it is closed territory: a point of lift costs
+a training run, and a handful of labs can pay. Program space is the opposite —
+open to anyone, priced in tens of dollars, iterable in an afternoon — and the
+same model routinely swings by double digits depending on the harness it runs
+inside.<!-- TODO: pin a real number here — SWE-bench leaderboard spread for a
+fixed model across scaffolds is the obvious citation -->
 
-- The hook, concrete: GEPA reports gains on its tasks with its seed programs;
-  AFlow on its; ADAS/AdaEvolve/DGM likewise. Different tasks, different seed
-  agents, different budgets, different models. The numbers never meet.
-- The one sentence this post exists to earn: *we run N optimization methods,
-  vendored verbatim, against the same seed agents on the same tasks under the
-  same metered budget — and the method is the only variable.*
-- A number to plant early: our do-nothing baseline costs \$0.82 and scores
-  0.59 on GPQA-Diamond. Everything a method claims is measured against that.
+Until recently, program space was searched by hand, which is to say barely:
+harness design is a high-dimensional, gradient-free search problem, and humans
+explore it by folklore. What changed is that frontier models became good enough
+to do the searching — to read an agent's trajectory, diagnose the failure, and
+propose an edit. A field has formed around this almost overnight: GEPA
+[@gepa], AFlow [@aflow], AdaEvolve [@adaevolve], Gödel-machine-style
+self-modifiers, a new optimizer every few weeks. And if your instinct is that
+the next model release makes all of this moot — note that the argument cuts the
+other way. The optimizer is a model too. Every release upgrades the thing that
+improves the agent, not just the agent.
+
+It is not hard to see where this goes. If program-space search keeps
+compounding with model capability, harness design stops being artisanal:
+you don't hand-write a scaffold any more than you hand-tune weights — you pick
+an optimizer, point it at your agent, and pay for the lift. Agent optimization
+becomes a component you choose the way you choose Adam over SGD. For that
+future to arrive, one question has to have a measurable answer: *which of these
+methods actually works, on what, and at what cost?*
+
+Right now it doesn't. Every optimizer paper grades its own homework: its own
+tasks, its own seed agents, its own budget, its own base model — and, when
+baselines appear at all, its own reimplementation of the competition. The
+numbers never meet. A field that cannot compare its methods cannot tell whether
+it is making progress.
+
+MABench is our attempt at the measuring stick. It runs agent-optimization
+methods — vendored verbatim, never reimplemented — against the same seed
+agents, on the same task suites, under the same metered budget, with test
+scores sealed until the run is over. The method is the only variable. The
+deliverable is not a leaderboard number but an anytime curve — how much lift
+over the seed agent a method buys per dollar spent — reported across a grid of
+tasks, seeds, and budgets. This post explains the protocol: what a run is, what
+gets measured, and why we made the design choices we did. Part 2 reports what
+happened when we ran it.
 
 ## The unit of evaluation is a process, not a model
 
