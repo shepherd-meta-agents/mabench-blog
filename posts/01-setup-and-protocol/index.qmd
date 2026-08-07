@@ -1,6 +1,6 @@
 ---
-title: "MABench, Part 1: The Benchmark"
-subtitle: "How to benchmark the thing that improves the agent."
+title: "MABench: The Benchmark"
+subtitle: "How to benchmark the thing that improves the agent — and what happened when we did."
 date: "2026-08-05"
 author:
   - name: "TODO — author list"
@@ -63,9 +63,9 @@ agents, on the same task suites, under the same metered budget, with test
 scores sealed until the run is over. The method is the only variable. The
 deliverable is not a leaderboard number but an anytime curve — how much lift
 over the seed agent a method buys per dollar spent — reported across a grid of
-tasks, seeds, and budgets. This post explains the protocol: what a run is, what
-gets measured, and why we made the design choices we did. Part 2 reports what
-happened when we ran it.
+tasks, seeds, and budgets. The first half of this post explains the protocol:
+what a run is, what gets measured, and why we made the design choices we did.
+The second half reports what happened when we ran it.
 
 ## Taxonomy of meta-optimization
 
@@ -214,13 +214,63 @@ extrapolation.](figures/noise_floor.png){#fig-noise width=88%}
 When the budget runs out, the run is over. What survives is everything the
 comparison needs and nothing the method can spin: the candidate graph, the
 stamped curve, the ledger, the full trace — and a floor measurement that says
-how big a lift has to be before it means anything. That is the protocol. What
-happened when we pointed it at real methods is Part 2.
+how big a lift has to be before it means anything. That is the protocol.
+Here is what happened when we pointed it at real methods.
+
+## First results: methods against the floor
+
+The first slice of the grid is done: four optimizers plus the null floor,
+run across the CharXiv, GPQA, and Terminal-Bench-2 cells of @tbl-suite —
+worker `haiku-4.5`, meta-agent `opus-4.8`, a $150 ledger cap per run. The
+core result is one number per method: mean Δ over the *measured* floor,
+averaged settings-first so GPQA's three repeats don't outvote single-run
+cells.
+
+![The method axis, after $150 of search per cell: mean lift over the
+measured floor. AdaEvolve **+0.043** · GEPA **+0.018** · Meta-Harness
+**+0.017** · AFlow **−0.008** — identical, to the third decimal, to what
+the untouched seed scored on its own
+re-run.](figures/method_delta.png){#fig-method-delta width=72%}
+
+Read this against the section above. AdaEvolve leads at +0.043, and its
+best cell — +0.053 on GPQA — is the one lift in the slice that approaches
+the two-sigma bar; its average also covers only the two cells it finished
+(it crashed early on a third, which we excluded rather than score its
+untouched seed as a method result). GEPA (+0.018) and Meta-Harness
+(+0.017) sit clear of zero but inside the noise band: real-looking, not
+yet claimable. AFlow's one finished cell lands at −0.008 — exactly what
+the null floor scored on its own re-run. So the honest one-line summary
+of the first slice: **one method produces a lift big enough to take
+seriously, two produce lifts the noise could have produced, and one
+produces nothing the seed didn't already have.**
+
+![The same runs, cell by cell: final sealed test score per method per
+setting, against the floor repeats (black dashes). Left: the sweep grid,
+one run per cell — unfinished cells are simply absent. Right: the GPQA
+minimal cell at three repeats per method. The bars barely clear the
+dashes — that closeness *is* the finding, and it is invisible in a
+benchmark that doesn't measure its floor.](figures/method_bars.png){#fig-method-bars width=100%}
+
+Two caveats, stated rather than buried. The grid is unbalanced — some
+cells are still running, some crashed, and both TB2 cells lack a measured
+floor, so they appear in the per-cell view but contribute nothing to the
+Δ average. And every number above is one $150 run (three on GPQA), so
+this section will be re-cut as reps accumulate. What it already shows is
+the shape of the field at this budget: gains exist, they are small, and
+without the floor they would be indistinguishable from luck.
 
 <!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
      - Validity beyond noise (jail / reward-hacking, dev→test gap, construct validity)
      - Where this sits (NAS-Bench / HPOBench lineage)
+     Results sections absorbed from the retired Part 2 skeleton (add under
+     "First results" as data accumulates):
+     - The cost story (anytime curves; accuracy-per-dollar)
+     - Dev vs. test (the selection gap)
+     - Per-method notes (a short read on each optimizer's behavior)
+     - Failure analysis (what the worker trajectories reveal)
+     - Generalization (does lift transfer across seeds and carriers?)
+     - Takeaways & open questions
      Parked from an earlier draft (may return as a protocol-details section):
      the disclosure ladder — endpoint table (run_train full facets / score_dev
      scalar, charged to budget / score_test sealed / spend free) + "a method
