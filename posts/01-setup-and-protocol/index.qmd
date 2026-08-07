@@ -9,9 +9,6 @@ bibliography: references.bib
 draft: false
 ---
 
-<!-- SKELETON below the lede. Notes under each header are content bullets to
-     expand, not prose. An earlier full-prose draft is in git history. -->
-
 There are roughly two ways to make an agent better. You can improve the model —
 pretraining, RL, post-training of every flavor — or you can improve the
 *program* wrapped around it: the prompts, the workflow, the tools, the
@@ -36,10 +33,10 @@ to do the searching — to read an agent's trajectory, diagnose the failure, and
 propose an edit. A field has formed around this almost overnight: prompt
 evolvers like GEPA [@gepa], workflow searchers like AFlow [@aflow], and the
 recursive-self-improvement line — ADAS, the Darwin Gödel Machine — where the
-agent rewrites its own scaffold. A new optimizer every few weeks. And if your instinct is that
-the next model release makes all of this moot — note that the argument cuts the
-other way. The optimizer is a model too. Every release upgrades the thing that
-improves the agent, not just the agent.
+agent rewrites its own scaffold. A new optimizer every few weeks. And if your
+instinct is that the next model release makes all of this moot — note that the
+argument cuts the other way. The optimizer is a model too. Every release
+upgrades the thing that improves the agent, not just the agent.
 
 It is not hard to see where this goes. If program-space search keeps
 compounding with model capability, harness design stops being artisanal:
@@ -70,77 +67,55 @@ tasks, seeds, and budgets. This post explains the protocol: what a run is, what
 gets measured, and why we made the design choices we did. Part 2 reports what
 happened when we ran it.
 
-## The unit of evaluation is a process, not a model
+## Anatomy of a run
 
-- Why the standard benchmark playbook breaks here: you're not scoring an
-  artifact, you're scoring a *procedure* that spends money to produce artifacts.
-- Consequence 1: the metric is **Δ over seed**, not absolute score. A method
-  that "achieves 65%" tells you nothing until you know the seed scored 61%.
-- Consequence 2: cost is not an implementation detail, it's an axis. The
-  deliverable is an **anytime curve** — sealed test score as a function of
-  dollars spent — not a number.
-- Consequence 3: every result is conditional on (task × seed × budget × model).
-  We report the grid; we do not marginalize it into a leaderboard. Say why,
-  plainly, and take the flak for it here rather than in reviews.
+A run hands the method three things: a copy of the seed agent, a workspace,
+and a budget. Inside the workspace it can do whatever it likes — rewrite the
+agent's prompt, restructure its workflow, edit its source, spawn its own LLM
+calls to think with. We deliberately impose no structure on the search loop.
+The method owns its loop; the framework owns everything that has to be
+common for the comparison to mean anything: identity, scoring, budget, and
+metering.
 
-## One run, mechanically
+All of that passes through four endpoints, and the design is in what each one
+is allowed to reveal — a disclosure ladder:
 
-- Walk one run end to end, second person or narrated: method gets a workspace,
-  a seed agent, and a budget. It can do anything in the workspace.
-- The three metered endpoints and what each discloses — the **disclosure
-  ladder**: `run_train` returns full trajectories, `score_dev` returns a
-  scalar, `score_test` is sealed until the run ends. Spend is free to query.
-- Two-facet feedback: the dataset's verdict *and* the worker's trajectory.
-  Why methods need both (GEPA reads trajectories; hill-climbers only need
-  scalars).
-- **Stamps**: every time the method says "this is my best so far," we record
-  (spend, candidate). That sequence *is* the anytime curve. The method never
-  grades itself.
-- Per-actor ledger: meta-spend (the optimizer thinking) vs. worker-spend (the
-  agent doing tasks) metered separately. Real asymmetry to preview: one method
-  burns \$150/run mostly on meta; another spends almost everything on workers.
+| Endpoint | What it does | What the method sees |
+|---|---|---|
+| `run_train` | run a candidate on training tasks | everything: per-task verdicts (gold included) and, on request, the worker's trajectory |
+| `score_dev` | score a candidate on the dev split | a scalar, nothing else — and the check is charged to the method's own budget |
+| `score_test` | score a candidate on the held-out test split | nothing — framework-only, sealed until the run ends |
+| `spend` | query the meter | its own ledger — free, so budget discipline is expressible |
 
-## Faithfulness, or: don't rewrite the methods you're judging
+The ladder exists because optimizers differ in what feedback they can even
+consume. A prompt hill-climber needs only the `score_dev` scalar; GEPA's whole
+mechanism is *reading* the training trajectories and reflecting on the
+failures. So training feedback comes in two facets — the dataset's verdict on
+each task, and the worker's trajectory getting there — while dev feedback
+is deliberately starved down to a number that costs budget to look at, and
+test feedback doesn't exist at all. A method cannot overfit what it never
+sees.
 
-- The failure mode of every methods-comparison paper: reimplement competitors,
-  reimplement them badly, win.
-- Our rule: methods are **vendored verbatim** behind thin adapters. The method
-  owns its search loop; the framework owns identity, scoring, budget, metering.
-  We do not invert control, we do not port, we do not "fix."
-- The cost of that rule: methods keep their native selection logic, native
-  hyperparameters, native prompts — so some differences between methods are
-  differences in *tuning effort by their authors*. Name this honestly.
+Two more pieces of bookkeeping do most of the benchmark's work. First, the
+**stamp**: whenever the method believes it has a new best candidate, it says
+so. Each stamp is recorded with the spend at that moment, and the stamped
+candidates are scored — later, by us, on the sealed test split. The sequence
+of (spend, test score) points *is* the anytime curve; the method never grades
+itself. Second, the **per-actor ledger**: every token in the run is metered
+and attributed either to the meta-agent (the optimizer thinking) or to the
+workers (the agent doing tasks). The split matters — two methods with the same
+total spend can be doing completely different things with it, and Part 2 shows
+exactly that.
 
-## The grid
+When the budget runs out, the run is over. What survives is everything the
+comparison needs and nothing the method can spin: the stamped candidates, the
+curve, the ledger, and a trace of every call the method made along the way.
 
-- Carriers: GPQA (one-shot QA), CharXiv (one-shot), τ²-bench and
-  terminal-bench (launchable agents). Why both forms matter — some methods
-  can't even *express* an edit to a launchable agent. [small table]
-- Seeds: five per carrier, spanning an abstraction axis from bare prompt to
-  full agent scaffold. A method that lifts a weak seed may do nothing to a
-  strong one — that's a finding, not noise.
-- Methods, placed on the **coupling × surface** grid: what the method may
-  touch (prompt / workflow / source) × how tightly it couples to the task.
-  GEPA · AFlow · AdaEvolve · Meta-Harness · a coding agent · HGM ·
-  prompt-hill. [the grid figure]
+## Where the next section goes
 
-## What can go wrong (and what we did about it)
-
-- Reward hacking the harness: methods run LLM-authored code — the sealed test
-  set and the metering must survive an adversary. The syscall jail; what it
-  covers today and what it doesn't. Be specific about the gap.
-- Dev→test overfitting: methods select on dev; we report sealed test. Preview
-  Part 2: the gap is real and method-dependent.
-- Floor noise & nondeterminism: 5 seeds, multiple replicates, and even then —
-  the null baseline's variance is the noise floor every claimed lift must clear.
-- The one we can't engineer away: construct validity. Is "good at optimizing
-  agents" one ability, or is every cell of the grid its own skill? We don't
-  know yet. Say so.
-
-## Where this sits
-
-- Lineage: NAS-Bench, HPOBench — benchmarks *of optimizers*, where the search
-  method is the subject and the objective is fixed. Not a gym (nothing is
-  being trained), not an agent leaderboard (agents are held fixed).
-- Close with the pointer to Part 2: what actually happened when we ran the
-  grid on GPQA — including the method that spent \$100 to lose to \$0.82.
+<!-- Next sections, in the order we'll draft them:
+     - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
+     - The grid (carriers · seeds · methods on the coupling × surface axes)
+     - What can go wrong (jail / reward-hacking, dev→test gap, noise floor,
+       construct validity)
+     - Where this sits (NAS-Bench / HPOBench lineage; pointer to Part 2) -->
