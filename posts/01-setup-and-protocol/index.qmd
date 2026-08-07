@@ -6,7 +6,7 @@ author:
   - name: "TODO — author list"
 categories: [meta-agents, benchmark, protocol]
 bibliography: references.bib
-draft: true
+draft: false
 ---
 
 <!-- SKELETON. Notes under each header are content bullets to expand, not prose.
