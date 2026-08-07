@@ -263,17 +263,142 @@ this section will be re-cut as reps accumulate. What it already shows is
 the shape of the field at this budget: gains exist, they are small, and
 without the floor they would be indistinguishable from luck.
 
+## The analyses to come
+
+The grid is still filling in, so the rest of the results are written here
+as protocol, not findings: for each question, what we measure, which
+artifact it reads from, and what would count as an answer. None of it
+needs new instrumentation — every analysis below runs off the record a
+run already leaves behind (the candidate graph, the stamped curve, the
+ledger, the sealed scores). The numbers land as the cells finish.
+
+### Reading each method on its own terms
+
+A single Δ per method compresses away the thing MABench actually records:
+*how* the lift was produced. So each method gets a post-mortem built from
+the same three artifacts — the candidate DAG (what it proposed, in what
+order, descended from what), the ledger (where its $150 went: proposal
+tokens vs. evaluation rollouts), and the anytime curve (when in the
+budget the lift arrived). The strength/weakness read is the
+cross-tabulation. A method that spends most of its budget evaluating one
+deep chain is exploiting; one that fans out forty shallow candidates and
+keeps none is exploring without memory; and the most instructive failures
+are methods doing a competent search over the wrong surface.
+
+Per method, the mechanism-specific question each trace should answer:
+
+- **AdaEvolve** — it edits the agent's source, and it currently leads the
+  slice. The question is *what kind* of edit is paying: control-flow
+  changes, or prompt strings that happen to live in code? Diff every
+  accepted candidate against its parent and classify the hunks. If the
+  gains are mostly embedded-prompt edits, AdaEvolve is a prompt optimizer
+  with a compiler's reach — worth knowing before crediting "code
+  evolution."
+- **GEPA** — reflective prompt evolution with Pareto-based selection. The
+  check: does the Pareto frontier stay diverse or collapse into one
+  lineage, and do successive reflections compound (each diff builds on
+  the last) or oscillate (later generations undo earlier ones)?
+- **Meta-Harness** — it rewrites the harness around a fixed agent. The
+  check: which harness surfaces it actually touches across cells, and
+  whether its +0.017 comes from one repeated trick or from
+  carrier-specific adaptation.
+- **AFlow** — MCTS over operator graphs. The check: how much of the
+  operator vocabulary the search visits at this budget, and how deep the
+  tree gets before the ledger runs out — a search designed for more
+  budget than $150 should look visibly truncated, and that is a finding
+  about cost-conditionality, not a defect.
+- **HGM** — its only run is a TB2 cell with no measured floor, so it has
+  a trace but no Δ. It joins this section when the TB2 floors are
+  measured.
+
+### Dev vs. test: the selection gap
+
+Every run yields two lifts: Δdev — the method's chosen winner, scored on
+the split it could see — and Δtest, the same candidate on the sealed
+split it never saw. The gap between them is the selection gap, and it is
+the single most policy-relevant number in the benchmark: it is the size
+of the haircut that "we improved the agent by X" takes when X was picked
+on the same data used to search. The analysis is one scatter, Δdev
+against Δtest per run, colored by method, with the floor band drawn on
+both axes. Methods on the diagonal are selecting real improvements;
+methods consistently below it by more than the floor are optimizing the
+selection, not the agent. Because the seal is structural (the method's
+interface simply never exposes test items), any systematic gap is
+attributable to selection pressure on dev — not leakage.
+
+### Sensitivity to initialization
+
+Three nested senses, cheapest first. *Run-to-run:* same seed, same
+method, repeated — the gpqa-3seed repeats already measure this, and the
+first question is whether a method's own spread exceeds the seed floor's
+0.021; a method noisier than the thing it optimizes cannot be ranked from
+single runs. *Seed strength:* same carrier, same method, three seed
+levels — the base/medium/advanced columns of @tbl-suite exist precisely
+for this. Does Δ shrink as the seed strengthens (headroom exhaustion), or
+grow (stronger seeds give the optimizer more structure to work with)?
+Each carrier row is a controlled comparison. *Convergence:* from
+different seeds on one carrier, do a method's final candidates converge
+on the same tricks — measured by diffing the final artifacts and by
+behavioral agreement on shared items — or is the endpoint path-dependent?
+If it converges, cheap seeds suffice and seed choice is a nuisance
+parameter; if it doesn't, "the optimized agent" is an artifact of where
+you started, and single-seed reporting is quiet cherry-picking.
+
+### Failure analysis: what makes a run fail
+
+A benchmark that reports only finished runs launders its denominator. So:
+classify every *launched* run — finished-and-lifted, finished-flat,
+crashed, budget-exhausted — and for each non-lift, read the meta-trace
+backwards to the proximate cause. The taxonomy we expect, from the runs
+so far: hard method crashes (AdaEvolve's CharXiv-medium run died $1.40
+in, disclosed above); budget exhaustion mid-search with the best
+candidate still unevaluated; degenerate proposals the method could not
+back out of (candidates scoring below seed, then selected anyway);
+and harness-fighting — malformed artifacts, contract violations, retry
+loops that burn ledger without producing candidates. Failure rates get
+reported next to Δ, per method: a +0.043 that crashes a third of the
+time is a different proposition from a +0.017 that always lands, and the
+field's habit of reporting only the first number is part of what MABench
+exists to correct.
+
+### Generalization: does an optimized candidate travel?
+
+Take each cell's winning candidate and re-evaluate it — evaluation only,
+no further search, a fraction of a run's cost — everywhere else it can
+legally run. The taxonomy from earlier sections does real work here:
+coupling class determines the shape of the matrix. Agent-agnostic
+context candidates (a GEPA prompt) can be carried to other seeds on the
+same carrier; endogenous code edits are welded to their agent and can
+only travel across datasets, not seeds. So the cross-eval matrix is
+triangular by construction, and the per-class transfer ratio —
+Δ-elsewhere over Δ-at-home — is the statistic. A method whose lift
+survives the trip has improved the agent; a method whose lift stays home
+has fit the dataset, however impressive the home number.
+
+### Browse the runs yourself
+
+Every analysis above is auditable by hand, because every run's record is
+browsable. The corpus ships with a read-only, build-free web visualizer:
+a **Leaderboard** (the comparison board with matched cost→performance),
+**Iterations** (best-so-far against budget — the anytime view),
+**Pivot** (the method × condition fingerprint heatmap), **Runs** (one
+run's anatomy: candidate graph, meta-trace, ledger), and an **Explorer**
+(a single run's proposals, exact candidate ancestry, and the evidence
+behind each accept). Every view carries its state in the URL — facets,
+held conditions, even a specific seed-vs-candidate diff — so any figure
+in this post can be linked as the interactive view it was cut from.
+The live instance is at
+[the run visualizer](http://127.0.0.1:8765/)<!-- TODO: local-only URL —
+replace with the public deployment before sharing this post -->.
+
 <!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
      - Validity beyond noise (jail / reward-hacking, dev→test gap, construct validity)
      - Where this sits (NAS-Bench / HPOBench lineage)
-     Results sections absorbed from the retired Part 2 skeleton (add under
-     "First results" as data accumulates):
+     Results sections still pending (add under "First results" / "The analyses
+     to come" as data accumulates):
      - The cost story (anytime curves; accuracy-per-dollar)
-     - Dev vs. test (the selection gap)
-     - Per-method notes (a short read on each optimizer's behavior)
-     - Failure analysis (what the worker trajectories reveal)
-     - Generalization (does lift transfer across seeds and carriers?)
+     - The model axis, filled in (gpt-5.6-sol / opus-5 replacing the queued slots)
      - Takeaways & open questions
      Parked from an earlier draft (may return as a protocol-details section):
      the disclosure ladder — endpoint table (run_train full facets / score_dev
