@@ -128,7 +128,8 @@ fixed harness comes out reliably superior. HarnessOpt-Bench
 [@harnessoptbench] shows the same thing right in its main table: every
 optimizer configuration is run twice, and the two rounds routinely
 disagree — across its 40 contestants the median round-to-round range is
-0.07 normalized-gain units, the worst is 0.36, and for several the range
+0.07 normalized-gain units, the worst is 0.36 (the same configuration
+scoring +0.23 one round and +0.59 the next), and for several the range
 crosses zero, meaning the two rounds disagree on whether the optimizer
 helped *at all*. Their reading matches ours: differences among
 configurations "are often smaller than their round-to-round variation,
@@ -137,13 +138,6 @@ supporting tiers rather than a complete ranking." And when the
 [@omni], the win column split 3–3–4 across ten tasks — even with noise
 controlled, the winner flips task by task, so a comparison on one task and
 one run supports almost nothing.
-
-![HarnessOpt-Bench's main results, re-plotted as variation
-[@harnessoptbench]: each bar is one model × harness × task configuration,
-spanning the range its two rounds produced. The extreme case is a spread of
-0.36 — same configuration, +0.23 one round, +0.59 the next — and every
-orange bar is a configuration whose two rounds disagree on whether it beat
-the seed at all.](figures/hob_variation.png){#fig-hob width=100%}
 
 The only honest response is repetition. Every cell in our grid is run as
 multiple independent repeats, and lifts are reported against the measured
