@@ -122,17 +122,18 @@ structure on the search loop. The method owns its loop; the framework owns
 everything that has to be common for the comparison to mean anything:
 identity, scoring, budget, and metering.
 
-| Carrier | The task | Seed agents (base + literature-pattern variants) | Seed baselines (5-rep) |
-|---|---|---|---|
-| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT · Program-of-Thoughts · multi-agent debate · self-refine · Tree-of-Thoughts | 0.58 · 0.61–0.69 |
-| **τ²-bench** | tool-use dialog against a simulated user | ReAct · plan-then-act · ReWOO · reflect · memory-scratchpad | 0.33 · 0.31–0.39 |
-| **CharXiv** | multimodal chart QA | direct VLM · PoT over the extracted table · crop-zoom re-query · draft→verify→revise · self-consistency | 0.51 · 0.50–0.68 |
-| **Terminal-Bench-2** | terminal / coding tasks in containers | launchable terminal agent (seed grid in progress) | — |
+| Carrier | The task | Base | Medium | Advanced |
+|---|---|---|---|---|
+| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
+| **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
+| **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
+| **Terminal-Bench-2** | terminal / coding tasks in containers | terminal agent | *in progress* | *in progress* |
 
-: The current grid. Each carrier ships a base seed plus four variants, each
-abstracting one design pattern from the literature; every seed is a
-launchable agent tree paired to a matched data split, with its baseline
-measured over five repetitions. {#tbl-suite}
+: The current grid. Each carrier ships one base seed and four
+literature-pattern variants, arranged by scaffold complexity: the base is
+the bare pattern, medium seeds add one mechanism to it, advanced seeds are
+multi-stage or multi-agent. Every seed is a launchable agent tree paired to
+a matched data split. {#tbl-suite}
 
 The variants are the point, not decoration: each exposes a different edit
 surface — a debate seed has roles to retune, a PoT seed has code to fix, a
