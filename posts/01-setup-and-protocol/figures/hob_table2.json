@@ -1,0 +1,322 @@
+[
+ {
+  "task": "OfficeQA",
+  "model": "claude-opus-5",
+  "harness": "claude-code",
+  "mean": 0.59,
+  "lo": 0.54,
+  "hi": 0.64
+ },
+ {
+  "task": "OfficeQA",
+  "model": "claude-opus-5",
+  "harness": "opencode",
+  "mean": 0.63,
+  "lo": 0.6,
+  "hi": 0.67
+ },
+ {
+  "task": "OfficeQA",
+  "model": "claude-sonnet-5",
+  "harness": "claude-code",
+  "mean": 0.53,
+  "lo": 0.51,
+  "hi": 0.55
+ },
+ {
+  "task": "OfficeQA",
+  "model": "claude-sonnet-5",
+  "harness": "opencode",
+  "mean": 0.51,
+  "lo": 0.46,
+  "hi": 0.56
+ },
+ {
+  "task": "OfficeQA",
+  "model": "gpt-5.6-sol",
+  "harness": "codex",
+  "mean": 0.49,
+  "lo": 0.47,
+  "hi": 0.5
+ },
+ {
+  "task": "OfficeQA",
+  "model": "gpt-5.6-sol",
+  "harness": "opencode",
+  "mean": 0.29,
+  "lo": 0.27,
+  "hi": 0.32
+ },
+ {
+  "task": "OfficeQA",
+  "model": "gpt-5.6-terra",
+  "harness": "codex",
+  "mean": 0.07,
+  "lo": -0.04,
+  "hi": 0.17
+ },
+ {
+  "task": "OfficeQA",
+  "model": "gpt-5.6-terra",
+  "harness": "opencode",
+  "mean": 0.14,
+  "lo": 0.0,
+  "hi": 0.27
+ },
+ {
+  "task": "OfficeQA",
+  "model": "kimi-k3",
+  "harness": "kimi-cli",
+  "mean": 0.59,
+  "lo": 0.59,
+  "hi": 0.6
+ },
+ {
+  "task": "OfficeQA",
+  "model": "kimi-k3",
+  "harness": "opencode",
+  "mean": 0.41,
+  "lo": 0.23,
+  "hi": 0.59
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "claude-opus-5",
+  "harness": "claude-code",
+  "mean": 0.41,
+  "lo": 0.38,
+  "hi": 0.44
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "claude-opus-5",
+  "harness": "opencode",
+  "mean": 0.48,
+  "lo": 0.42,
+  "hi": 0.55
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "claude-sonnet-5",
+  "harness": "claude-code",
+  "mean": 0.07,
+  "lo": 0.02,
+  "hi": 0.12
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "claude-sonnet-5",
+  "harness": "opencode",
+  "mean": 0.15,
+  "lo": 0.11,
+  "hi": 0.19
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "gpt-5.6-sol",
+  "harness": "codex",
+  "mean": 0.03,
+  "lo": 0.02,
+  "hi": 0.03
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "gpt-5.6-sol",
+  "harness": "opencode",
+  "mean": 0.09,
+  "lo": 0.05,
+  "hi": 0.14
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "gpt-5.6-terra",
+  "harness": "codex",
+  "mean": -0.03,
+  "lo": -0.06,
+  "hi": 0.01
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "gpt-5.6-terra",
+  "harness": "opencode",
+  "mean": 0.02,
+  "lo": 0.01,
+  "hi": 0.04
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "kimi-k3",
+  "harness": "kimi-cli",
+  "mean": 0.23,
+  "lo": 0.23,
+  "hi": 0.23
+ },
+ {
+  "task": "BrowseComp-Plus",
+  "model": "kimi-k3",
+  "harness": "opencode",
+  "mean": 0.16,
+  "lo": 0.09,
+  "hi": 0.22
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "claude-opus-5",
+  "harness": "claude-code",
+  "mean": 0.18,
+  "lo": 0.17,
+  "hi": 0.2
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "claude-opus-5",
+  "harness": "opencode",
+  "mean": 0.29,
+  "lo": 0.29,
+  "hi": 0.29
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "claude-sonnet-5",
+  "harness": "claude-code",
+  "mean": 0.1,
+  "lo": 0.02,
+  "hi": 0.18
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "claude-sonnet-5",
+  "harness": "opencode",
+  "mean": 0.15,
+  "lo": 0.09,
+  "hi": 0.22
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "gpt-5.6-sol",
+  "harness": "codex",
+  "mean": 0.12,
+  "lo": 0.11,
+  "hi": 0.12
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "gpt-5.6-sol",
+  "harness": "opencode",
+  "mean": 0.13,
+  "lo": 0.12,
+  "hi": 0.15
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "gpt-5.6-terra",
+  "harness": "codex",
+  "mean": 0.01,
+  "lo": -0.02,
+  "hi": 0.05
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "gpt-5.6-terra",
+  "harness": "opencode",
+  "mean": 0.04,
+  "lo": 0.0,
+  "hi": 0.09
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "kimi-k3",
+  "harness": "kimi-cli",
+  "mean": 0.16,
+  "lo": 0.13,
+  "hi": 0.2
+ },
+ {
+  "task": "Terminal-Bench",
+  "model": "kimi-k3",
+  "harness": "opencode",
+  "mean": 0.12,
+  "lo": 0.04,
+  "hi": 0.21
+ },
+ {
+  "task": "GAIA",
+  "model": "claude-opus-5",
+  "harness": "claude-code",
+  "mean": 0.42,
+  "lo": 0.34,
+  "hi": 0.5
+ },
+ {
+  "task": "GAIA",
+  "model": "claude-opus-5",
+  "harness": "opencode",
+  "mean": 0.47,
+  "lo": 0.4,
+  "hi": 0.54
+ },
+ {
+  "task": "GAIA",
+  "model": "claude-sonnet-5",
+  "harness": "claude-code",
+  "mean": 0.33,
+  "lo": 0.23,
+  "hi": 0.42
+ },
+ {
+  "task": "GAIA",
+  "model": "claude-sonnet-5",
+  "harness": "opencode",
+  "mean": 0.25,
+  "lo": 0.24,
+  "hi": 0.26
+ },
+ {
+  "task": "GAIA",
+  "model": "gpt-5.6-sol",
+  "harness": "codex",
+  "mean": 0.49,
+  "lo": 0.47,
+  "hi": 0.52
+ },
+ {
+  "task": "GAIA",
+  "model": "gpt-5.6-sol",
+  "harness": "opencode",
+  "mean": 0.31,
+  "lo": 0.28,
+  "hi": 0.34
+ },
+ {
+  "task": "GAIA",
+  "model": "gpt-5.6-terra",
+  "harness": "codex",
+  "mean": 0.3,
+  "lo": 0.26,
+  "hi": 0.35
+ },
+ {
+  "task": "GAIA",
+  "model": "gpt-5.6-terra",
+  "harness": "opencode",
+  "mean": 0.17,
+  "lo": 0.16,
+  "hi": 0.18
+ },
+ {
+  "task": "GAIA",
+  "model": "kimi-k3",
+  "harness": "kimi-cli",
+  "mean": 0.31,
+  "lo": 0.27,
+  "hi": 0.34
+ },
+ {
+  "task": "GAIA",
+  "model": "kimi-k3",
+  "harness": "opencode",
+  "mean": 0.28,
+  "lo": 0.27,
+  "hi": 0.29
+ }
+]
