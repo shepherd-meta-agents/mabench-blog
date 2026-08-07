@@ -127,7 +127,7 @@ identity, scoring, budget, and metering.
 | **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
 | **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
 | **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
-| **Terminal-Bench-2** | terminal / coding tasks in containers | terminal agent | *in progress* | *in progress* |
+| **Terminal-Bench-2** | terminal / coding tasks in containers | minimal command loop | plan · reflect · explore | Terminus |
 
 : The current grid. Each carrier ships one base seed and four
 literature-pattern variants, arranged by scaffold complexity: the base is
