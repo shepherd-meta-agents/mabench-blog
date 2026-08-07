@@ -1,6 +1,6 @@
 ---
-title: "MAArena, Part 1: Benchmarking the Optimizer, Not the Agent"
-subtitle: "The setup and protocol behind a benchmark for meta-optimization methods."
+title: "MetaGym, Part 1: Benchmarking the Optimizer, Not the Agent"
+subtitle: "The setup and protocol behind a testbed for meta-optimization methods."
 date: "2026-08-05"
 author:
   - name: "TODO — author list"
@@ -20,7 +20,7 @@ Almost every agent benchmark asks the same question: *how good is this agent —
 this base model — at task τ?* You fix a task suite, you swap in agents or models,
 and you read off a leaderboard.
 
-MAArena asks a different question, one level up:
+MetaGym asks a different question, one level up:
 
 > **Given a fixed seed agent and a fixed budget, can a _method_ improve that
 > agent's held-out pass rate — and is the gain worth what it cost?**
@@ -35,7 +35,7 @@ agent they operate on is held fixed so that **the method is the only variable.**
 This reframing is the whole point. There is a fast-growing literature of
 "self-improving," "agent-optimizing," and "meta-agent" methods, each reporting
 gains on its own agent, its own task, its own budget. Those numbers are not
-comparable. MAArena fixes the agent, the task carrier, the budget, and the scoring
+comparable. MetaGym fixes the agent, the task carrier, the budget, and the scoring
 so that a claim like *"method M lifts this agent by Δ at this cost"* means the same
 thing across methods.
 
@@ -116,7 +116,7 @@ within one.
 
 ## The workers: five seeds per benchmark
 
-For each benchmark, MAArena ships **five seed agents** — one base plus four
+For each benchmark, MetaGym ships **five seed agents** — one base plus four
 literature-pattern variants — each a launchable `agent/` tree that satisfies the
 benchmark's I/O contract.
 
@@ -146,7 +146,7 @@ The methods are the actual subject of the benchmark. The current roster:
 | **HGM** | endogenous / self-improving: the agent proposes its own successor via its own `self_improve.py` |
 | **prompt_hill** | a walking-skeleton method that hill-climbs the system prompt via failure-driven edits |
 
-To make sense of a roster this heterogeneous, MAArena classifies each method on two
+To make sense of a roster this heterogeneous, MetaGym classifies each method on two
 independent axes.
 
 **Surface — what medium the method edits:**
@@ -192,7 +192,7 @@ self-modifying program. If the benchmark forced all of them through a rigid
 things would break: faithful re-hosting of published methods, and the freedom those
 methods need to do what they actually do.
 
-So MAArena inverts the usual contract. **The method is free inside its workspace;
+So MetaGym inverts the usual contract. **The method is free inside its workspace;
 the discipline lives entirely at the boundary.**
 
 ### The workspace
@@ -294,7 +294,7 @@ events and another emitting nothing is a difference in *color*, not a difference
 with zero source edits — a run with no overrides reproduces the published method.
 Methods select candidates with their *native* mechanism; `dev` is an *optional*
 scalar check, not a mandated selection gate, and only `test` is ever sealed. The
-goal is that MAArena measures the method as its authors built it, not a
+goal is that MetaGym measures the method as its authors built it, not a
 benchmark-flavored reinterpretation of it.
 
 **Isolation.** The method process runs jailed, with its workspace as the sole
@@ -337,5 +337,5 @@ curves reveal that a leaderboard hides.
 
 ---
 
-*This post describes the `mab2` framework in the MAArena / MA-bench repository.
+*This post describes the `mab2` framework in the MetaGym / MA-bench repository.
 Corrections and pointers to the code are welcome.*

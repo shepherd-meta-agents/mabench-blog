@@ -1,5 +1,5 @@
 ---
-title: "MAArena, Part 2: What the Optimizers Actually Do"
+title: "MetaGym, Part 2: What the Optimizers Actually Do"
 subtitle: "Analysis and findings from running the grid."
 date: "2026-08-06"
 author:
