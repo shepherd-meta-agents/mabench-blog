@@ -3,14 +3,14 @@ project:
   output-dir: _site
 
 website:
-  title: "MetaGym"
-  description: "A testbed for meta-optimizers — methods that improve a fixed agent."
+  title: "MABench"
+  description: "A benchmark for meta-optimizers — methods that improve a fixed agent."
   navbar:
     right:
       - text: "Posts"
         href: index.qmd
       - icon: github
-        href: https://github.com/shepherd-meta-agents/metagym-blog
+        href: https://github.com/shepherd-meta-agents/mabench-blog
 
 format:
   html:
