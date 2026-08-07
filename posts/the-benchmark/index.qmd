@@ -7,6 +7,8 @@ author:
 categories: [meta-agents, benchmark, protocol]
 bibliography: references.bib
 draft: false
+aliases:
+  - /posts/01-setup-and-protocol/
 ---
 
 There are roughly two ways to make an agent better. You can improve the model —

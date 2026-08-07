@@ -1,0 +1,11 @@
+---
+title: "MABench Safety and Adversarial Meta Harness"
+subtitle: "TODO"
+date: "2026-08-07"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, benchmark, safety]
+draft: false
+---
+
+<!-- Placeholder — content to come. -->
