@@ -9,5 +9,5 @@ listing:
   fields: [date, title, subtitle, reading-time]
 ---
 
-Two-post series on **MABench**: the first covers the setup and protocol; the
-second covers the analysis and findings.
+**MABench** — a benchmark for the methods that improve agents: the protocol,
+and what happened when we ran it.
