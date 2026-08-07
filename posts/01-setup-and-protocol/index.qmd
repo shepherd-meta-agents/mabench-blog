@@ -23,13 +23,18 @@ same model routinely swings by double digits depending on the harness it runs
 inside.<!-- TODO: pin a real number here — SWE-bench leaderboard spread for a
 fixed model across scaffolds is the obvious citation -->
 
+![The two axes. Progress so far has climbed the parameter wall — a training
+run per step, flattening returns. The program-space direction is open,
+cheap, and — as of roughly now — searchable by machine.](figures/two_axes.png){#fig-two-axes width=88%}
+
 Until recently, program space was searched by hand, which is to say barely:
 harness design is a high-dimensional, gradient-free search problem, and humans
 explore it by folklore. What changed is that frontier models became good enough
 to do the searching — to read an agent's trajectory, diagnose the failure, and
-propose an edit. A field has formed around this almost overnight: GEPA
-[@gepa], AFlow [@aflow], AdaEvolve [@adaevolve], Gödel-machine-style
-self-modifiers, a new optimizer every few weeks. And if your instinct is that
+propose an edit. A field has formed around this almost overnight: prompt
+evolvers like GEPA [@gepa], workflow searchers like AFlow [@aflow], and the
+recursive-self-improvement line — ADAS, the Darwin Gödel Machine — where the
+agent rewrites its own scaffold. A new optimizer every few weeks. And if your instinct is that
 the next model release makes all of this moot — note that the argument cuts the
 other way. The optimizer is a model too. Every release upgrades the thing that
 improves the agent, not just the agent.
@@ -47,6 +52,11 @@ tasks, its own seed agents, its own budget, its own base model — and, when
 baselines appear at all, its own reimplementation of the competition. The
 numbers never meet. A field that cannot compare its methods cannot tell whether
 it is making progress.
+
+![What comparison under one protocol looks like — an early sweep of sixteen
+optimizers on BBH-hard, same seed agent, same budget meter. Ranks reorder as
+budget grows; a leaderboard is just the right-hand edge of this
+plot.](figures/anytime_curve_bbh.png){#fig-anytime-bbh width=95%}
 
 MABench is our attempt at the measuring stick. It runs agent-optimization
 methods — vendored verbatim, never reimplemented — against the same seed
