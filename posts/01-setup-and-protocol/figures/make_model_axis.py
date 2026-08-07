@@ -3,9 +3,10 @@
 
 Every run in the first slice used meta=opus-4.8, so the model axis has exactly
 one measured value: the pooled mean Δ across all floored method cells (null
-excluded — it is the floor calibration, not a method). The other meta tiers the
-harness is plumbed for (sonnet-4.6, the codex-served gpt-5.6 family — see
-src/mab2/core/pricing.py) are drawn as empty dashed slots: reserved, not run.
+excluded — it is the floor calibration, not a method). The other planned meta
+tiers (gpt-5.6-sol, the codex-served frontier tier — see
+src/mab2/core/pricing.py — and opus-5) are drawn as empty dashed slots:
+reserved, not run.
 
 Reuses collect() from make_method_delta.py so the two panels always agree on
 exclusions and floor handling.
@@ -28,7 +29,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
 
 MEASURED = "opus-4.8"
-QUEUED = ["sonnet-4.6", "gpt-5.6"]
+QUEUED = ["gpt-5.6-sol", "opus-5"]
 
 
 def main():
