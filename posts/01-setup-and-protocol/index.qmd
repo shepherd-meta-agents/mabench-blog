@@ -86,53 +86,24 @@ sealed test score, and what it spent to get there** — Δ over seed, priced,
 traced out over the whole budget as an anytime curve. Every mechanism in the
 rest of this section exists to make that one number trustworthy.
 
-All of that passes through four endpoints, and the design is in what each one
-is allowed to reveal — a disclosure ladder:
+While the method searches, the framework records. Every event the method
+emits — propose, evaluate, decide — lands in a typed trace; every candidate
+it builds is stored content-addressed with a pointer to its parent, so the
+run leaves behind the full genealogy of the search, not just its winner; and
+every token is metered and attributed per actor, to the meta-agent (the
+optimizer thinking) or to the workers (the agent doing tasks). On top of that
+record sits the **stamp**, the one thing the method itself declares: whenever
+it believes it has a new best candidate, it says so. Each stamp freezes the
+ledger reading at that moment, and the stamped candidates are scored — later,
+by the framework — on the sealed test split. The sequence of
+(spend-at-stamp, test score) points *is* the anytime curve. The method never
+grades itself.
 
-| Endpoint | What it does | What the method sees |
-|---|---|---|
-| `run_train` | run a candidate on training tasks | everything: per-task verdicts (gold included) and, on request, the worker's trajectory |
-| `score_dev` | score a candidate on the dev split | a scalar, nothing else — and the check is charged to the method's own budget |
-| `score_test` | score a candidate on the held-out test split | nothing — framework-only, sealed until the run ends |
-| `spend` | query the meter | its own ledger — free, so budget discipline is expressible |
-
-The ladder exists because optimizers differ in what feedback they can even
-consume. A prompt hill-climber needs only the `score_dev` scalar; GEPA's whole
-mechanism is *reading* the training trajectories and reflecting on the
-failures. So training feedback comes in two facets — the dataset's verdict on
-each task, and the worker's trajectory getting there — while dev feedback
-is deliberately starved down to a number that costs budget to look at, and
-test feedback doesn't exist at all. A method cannot overfit what it never
-sees.
-
-Everything the method does is recorded, in two structures. The first is the
-**candidate graph**: every agent version the method builds is stored
-content-addressed with a pointer to its parent, so a run leaves behind the
-full genealogy of the search — which edits were tried, from where, and what
-each scored.
-
-![One run's candidate graph. Every node is an agent version the method built
-(colored by dev score), every edge one edit of a parent. The blue path is the
-lineage of the final best candidate — the part of the search that
-mattered.](figures/candidate_dag.png){#fig-cdag width=95%}
-
-The second is the **run record**: every endpoint call, every proposal, every
-accept/reject decision, and every token — metered and attributed per actor,
-to the meta-agent (the optimizer thinking) or to the workers (the agent doing
-tasks). That split matters: two methods with the same total spend can be doing
-completely different things with it, and Part 2 shows exactly that.
-
-![The run record, as our visualizer renders it: event counts
-(propose / evaluate / snapshot / decide), the cost decomposition
-— rollouts, agent vs. optimizer tokens, dollars — and a per-decision audit
-trail with the scores each decision saw.](figures/meta_trace_card.png){#fig-trace width=100%}
-
-On top of this record sits the **stamp**, the one thing the method itself
-declares: whenever it believes it has a new best candidate, it says so. Each
-stamp freezes the ledger reading at that moment, and the stamped candidates
-are scored — later, by the framework — on the sealed test split. The sequence
-of (spend-at-stamp, test score) points *is* the anytime curve. The method
-never grades itself.
+![The run, end to end: a pre-wired workspace (benchmarks × worker agents,
+pinned splits), a method plugged in running its own propose → evaluate →
+decide loop, and the substrate around it recording every method event and
+candidate version — jailed so the run has no reach to the
+score.](figures/workspace_slide.png){#fig-workspace width=100%}
 
 ## The noise floor
 
@@ -167,4 +138,8 @@ happened when we pointed it at real methods is Part 2.
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
      - The grid (carriers · seeds · methods on the coupling × surface axes)
      - Validity beyond noise (jail / reward-hacking, dev→test gap, construct validity)
-     - Where this sits (NAS-Bench / HPOBench lineage) -->
+     - Where this sits (NAS-Bench / HPOBench lineage)
+     Parked from an earlier draft (may return as a protocol-details section):
+     the disclosure ladder — endpoint table (run_train full facets / score_dev
+     scalar, charged to budget / score_test sealed / spend free) + "a method
+     cannot overfit what it never sees". In git history at bd539fc. -->
