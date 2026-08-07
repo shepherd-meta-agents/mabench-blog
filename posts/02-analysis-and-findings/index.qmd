@@ -1,6 +1,6 @@
 ---
-title: "MABench, Part 2: What the Optimizers Actually Do"
-subtitle: "Analysis and findings from running the grid."
+title: "MABench, Part 2: The Analysis"
+subtitle: "What the optimizers actually do — findings from running the grid."
 date: "2026-08-06"
 author:
   - name: "TODO — author list"
@@ -8,9 +8,40 @@ categories: [meta-agents, benchmark, analysis]
 draft: true
 ---
 
-<!-- Second post — analysis and findings. To be drafted next. -->
+<!-- LAYOUT ONLY — section skeleton, fill collaboratively. -->
 
-## Coming soon
+## What we ran
 
-This post will cover the results: which methods lift which agents, where the money
-goes, dev→test overfitting, and what the anytime curves reveal.
+*The slice under analysis: which methods × seeds × carriers, at what budget.*
+
+## Headline results
+
+*The lift matrix — which methods lift which agents, and by how much. [table]*
+
+## The cost story
+
+*Anytime curves; accuracy-per-dollar; how methods compare against the null
+baseline. [figure: lift vs. spend]*
+
+## Dev vs. test
+
+*The selection gap — how much dev overfits test, and what that implies for
+reported gains.*
+
+## Per-method notes
+
+*A short read on each optimizer's behavior (GEPA · AFlow · AdaEvolve ·
+Meta-Harness · …).*
+
+## Failure analysis
+
+*What the worker trajectories reveal — where and why methods break.*
+
+## Generalization
+
+*Does a method's lift transfer across seeds and carriers, or is it local?*
+
+## Takeaways & open questions
+
+*What we learned; what stays unresolved (construct validity, cost asymmetry,
+commensurability).*
