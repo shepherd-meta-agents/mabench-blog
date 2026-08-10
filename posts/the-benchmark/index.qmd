@@ -265,7 +265,26 @@ without the floor they would be indistinguishable from luck.
 
 ## Overfitting: dev vs. sealed test
 
-<!-- section intro + figures (dev_test_case.png) to come -->
+The 28 sealed runs of the current slice — two meta models, 14 runs per
+carrier, \$28–133 of search each — compress into one pair of bars per
+split (@fig-devtest-bars). On dev, optimization essentially always
+"works": every GPQA run and 11 of 14 τ² runs end above their genesis, for
+a mean claimed lift of **+0.044** on GPQA and **+0.088** on τ². (The
+three τ² exceptions are interrupted runs whose only checkpoint *is* the
+genesis — searches that never claimed a lift, not ones that lost ground.)
+On the sealed split the same selected candidates keep **−0.002** and
+**+0.019** — both inside the noise floor measured above — and on each
+benchmark exactly **half** the runs land above their genesis at all. After
+tens of dollars of search per run, whether the product beats its own seed
+on unseen items is a coin flip.
+
+![The lift that survives the seal. Left: mean lift over genesis on the
+split the optimizer could see (blue) vs. the sealed split (orange);
+whiskers are SEs across the 14 runs per carrier. Right: the share of runs
+whose selected candidate beats its genesis at all; the dashed line is
+50%.](figures/dev_test_bars.png){#fig-devtest-bars width=100%}
+
+<!-- case-study figure (dev_test_case.png) to come -->
 
 ### Where train, dev, and test come from
 
