@@ -263,6 +263,21 @@ this section will be re-cut as reps accumulate. What it already shows is
 the shape of the field at this budget: gains exist, they are small, and
 without the floor they would be indistinguishable from luck.
 
+## Overfitting: dev vs. sealed test
+
+<!-- section intro + figures (dev_test_case.png) to come -->
+
+### Where train, dev, and test come from
+
+The splits are built to be interchangeable: fixed near-equal
+thirds (GPQA **65/67/66**, τ² **54/55/55**), committed as id lists, and
+stratified so every split carries the identical domain mix — GPQA's
+biology/chemistry/physics proportions, τ²'s airline/retail balance
+(a flat shuffle had left GPQA's test physics-heavy). Dev and test are
+therefore the same measurement on different items, so any dev→test gap is
+selection pressure on a finite, noisy dev split — not leakage, and not
+distribution shift.
+
 ## The analyses to come
 
 The grid is still filling in, so the rest of the results are written here
@@ -311,7 +326,7 @@ Per method, the mechanism-specific question each trace should answer:
   a trace but no Δ. It joins this section when the TB2 floors are
   measured.
 
-### Dev vs. test: the selection gap
+### Generalization Gap
 
 Every run yields two lifts: Δdev — the method's chosen winner, scored on
 the split it could see — and Δtest, the same candidate on the sealed
