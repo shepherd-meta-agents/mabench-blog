@@ -286,7 +286,7 @@ whose selected candidate beats its genesis at all; the dashed line is
 
 The aggregate hides what the failure looks like from inside a single run.
 @fig-devtest-case is one: `meta_harness` on τ²-bench, minimal seed, Opus
-4.5 proposing. To the optimizer this run is a success — dev climbs from
+5 proposing. To the optimizer this run is a success — dev climbs from
 0.582 to a selected best of **0.685**. We posthoc-scored every distinct
 candidate the run produced on the sealed split, three reps each. The
 sealed curve tells the opposite story: the *second* candidate was the
