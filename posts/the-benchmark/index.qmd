@@ -310,10 +310,13 @@ The splits are built to be IID: fixed near-equal
 thirds (GPQA **65/67/66**, τ² **54/55/55**), committed as id lists, and
 stratified so every split carries the identical domain mix — GPQA's
 biology/chemistry/physics proportions, τ²'s airline/retail balance
-(a flat shuffle had left GPQA's test physics-heavy). Dev and test are
-therefore the same measurement on different items, so any dev→test gap is
-selection pressure on a finite, noisy dev split — not leakage, and not
-distribution shift.
+(a flat shuffle had left GPQA's test physics-heavy). Selection on dev is
+also score-only: a method may evaluate a candidate there as often as its
+budget allows, but all it gets back is a single scalar — no per-item
+verdicts, no transcripts, no gold. Only train exposes full feedback. Dev
+and test are therefore the same measurement on different items, so any
+dev→test gap is selection pressure on a finite, noisy dev split — not
+leakage, and not distribution shift.
 
 ## The analyses to come
 
