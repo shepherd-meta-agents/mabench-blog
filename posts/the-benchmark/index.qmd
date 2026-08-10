@@ -284,7 +284,25 @@ whiskers are SEs across the 14 runs per carrier. Right: the share of runs
 whose selected candidate beats its genesis at all; the dashed line is
 50%.](figures/dev_test_bars.png){#fig-devtest-bars width=100%}
 
-<!-- case-study figure (dev_test_case.png) to come -->
+The aggregate hides what the failure looks like from inside a single run.
+@fig-devtest-case is one: `meta_harness` on τ²-bench, minimal seed, Opus
+4.5 proposing. To the optimizer this run is a success — dev climbs from
+0.582 to a selected best of **0.685**. We posthoc-scored every distinct
+candidate the run produced on the sealed split, three reps each. The
+sealed curve tells the opposite story: the *second* candidate was the
+run's true peak (**0.564**, +0.019 over genesis), and every candidate
+after it scored worse — down to **0.461** at the end, 0.084 *below* the
+seed. The method wasn't merely failing to improve; it held its best
+candidate at checkpoint 2 and spent the remaining ~\$60 of search
+optimizing away from it, guided by a dev signal that kept rewarding the
+walk.
+
+![One run from the inside. Dev score of each checkpoint (blue) vs.
+sealed-test score of the same candidates (orange), placed at the
+checkpoint where each candidate first appeared; dotted lines mark the
+genesis score on each split. Dev and test disagree not just on how much
+was gained but on *which direction the run was
+moving*.](figures/dev_test_case.png){#fig-devtest-case width=88%}
 
 ### Where train, dev, and test come from
 
