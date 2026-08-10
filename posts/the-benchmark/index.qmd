@@ -349,16 +349,25 @@ Per method, the mechanism-specific question each trace should answer:
 
 Every run yields two lifts: Δdev — the method's chosen winner, scored on
 the split it could see — and Δtest, the same candidate on the sealed
-split it never saw. The gap between them is the selection gap, and it is
-the single most policy-relevant number in the benchmark: it is the size
-of the haircut that "we improved the agent by X" takes when X was picked
-on the same data used to search. The analysis is one scatter, Δdev
-against Δtest per run, colored by method, with the floor band drawn on
-both axes. Methods on the diagonal are selecting real improvements;
-methods consistently below it by more than the floor are optimizing the
-selection, not the agent. Because the seal is structural (the method's
-interface simply never exposes test items), any systematic gap is
-attributable to selection pressure on dev — not leakage.
+split it never saw. The gap between them is the single most
+policy-relevant number in the benchmark: it is the size of the haircut
+that "we improved the agent by X" takes when X was picked on the same
+data used to search. @fig-selection-scatter plots it for the 28 sealed
+runs. Not one run lands above the noise band around the
+full-transfer diagonal; nine fall below it. The mean haircut is
+**−0.058** — larger than any method's surviving lift — and it is not one
+method's pathology: GEPA gives back 0.043 of its claimed lift,
+Meta-Harness 0.075, AdaEvolve 0.047. The method that claimed the most
+gave back the most. Because the seal is structural (the method's
+interface simply never exposes test items), all of this is selection
+pressure on a noisy dev split — not leakage.
+
+![The selection gap, run by run. Each point is one sealed run: the lift
+the method claimed on dev against what survived on sealed test; color =
+method, circles = GPQA-Diamond, squares = τ²-bench. The dashed diagonal
+is full transfer; the band around it is ±2σ of eval noise. No run lands
+above the band; nine fall
+below it.](figures/selection_scatter.png){#fig-selection-scatter width=72%}
 
 ### Sensitivity to initialization
 
