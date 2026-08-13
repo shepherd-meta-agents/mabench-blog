@@ -122,16 +122,75 @@ headroom. A leaderboard built on numbers like these would be ranking
 luck.
 
 So we are publishing this as what it turned out to be: an **evaluation and
-analysis**. The rest of the post is the evidence — the noise floor every
-claim has to clear, what survived the sealed split and what evaporated
-there, why the strongest worker is the hardest to improve — and, closing,
+analysis**. The rest of the post is the evidence — what survived the
+sealed split and what evaporated there, the noise floor every claim has
+to clear, why the strongest worker is the hardest to improve — and, closing,
 what a benchmark of this kind would need before its rankings mean
 anything.
 
+## Overfitting: dev vs. sealed test
+
+The gap we led with, in full. Its core is the 28 sealed GPQA and τ² runs
+of the frontier-worker slice — worker `gpt-5.6-luna`, two meta models
+(`claude-opus-5` and `gpt-5.6-sol`) proposing, 14 runs per carrier,
+\$28–133 of search each — which compress into one pair of bars per split
+(@fig-devtest-bars). On dev, optimization essentially always "works":
+every GPQA run and 11 of 14 τ² runs end above their **genesis** — the
+seed they started from — for a mean claimed lift of **+0.044** on GPQA
+and **+0.088** on τ². (The three τ² exceptions are interrupted runs whose
+only checkpoint *is* the genesis — searches that never claimed a lift,
+not ones that lost ground.) On the sealed split the same selected
+candidates keep **−0.002** and **+0.019** — both inside the eval's own
+run-to-run noise, measured in the next section — and on each
+benchmark exactly **half** the runs land above their genesis at all. After
+tens of dollars of search per run, whether the product beats its own seed
+on unseen items is a coin flip.
+
+![The lift that survives the seal. Left: mean lift over genesis on the
+split the optimizer could see (blue) vs. the sealed split (orange);
+whiskers are SEs across the 14 runs per carrier. Right: the share of runs
+whose selected candidate beats its genesis at all; the dashed line is
+50%.](figures/dev_test_bars.png){#fig-devtest-bars width=100%}
+
+The aggregate hides what the failure looks like from inside a single run.
+@fig-devtest-case is one: `meta_harness` on τ²-bench, minimal seed, Opus
+5 proposing. To the optimizer this run is a success — dev climbs from
+0.582 to a selected best of **0.685**. We posthoc-scored every distinct
+candidate the run produced on the sealed split, three reps each. The
+sealed curve tells the opposite story: the *second* candidate was the
+run's true peak (**0.564**, +0.019 over genesis), and every candidate
+after it scored worse — down to **0.461** at the end, 0.084 *below* the
+seed. The method wasn't merely failing to improve; it held its best
+candidate at checkpoint 2 and spent the remaining ~\$60 of search
+optimizing away from it, guided by a dev signal that kept rewarding the
+walk.
+
+![One run from the inside. Dev score of each checkpoint (blue) vs.
+sealed-test score of the same candidates (orange), placed at the
+checkpoint where each candidate first appeared; dotted lines mark the
+genesis score on each split. Dev and test disagree not just on how much
+was gained but on *which direction the run was
+moving*.](figures/dev_test_case.png){#fig-devtest-case width=88%}
+
+### Where train, dev, and test come from
+
+The splits are built to be IID: fixed near-equal
+thirds (GPQA **65/67/66**, τ² **54/55/55**), committed as id lists, and
+stratified so every split carries the identical domain mix — GPQA's
+biology/chemistry/physics proportions, τ²'s airline/retail balance
+(a flat shuffle had left GPQA's test physics-heavy). Selection on dev is
+also score-only: a method may evaluate a candidate there as often as its
+budget allows, but all it gets back is a single scalar — no per-item
+verdicts, no transcripts, no gold. Only train exposes full feedback. Dev
+and test are therefore the same measurement on different items, so any
+dev→test gap is selection pressure on a finite, noisy dev split — not
+leakage, and not distribution shift.
+
 ## The noise floor
 
-The first thing the instrument measures is its own error bar, because
-this field is noisy in a way most benchmarks are not. The workers are
+Twice now a lift has been waved off as "inside the noise," so the next
+thing to establish is the noise itself. This field is noisy in a way
+most benchmarks are not. The workers are
 stochastic, the optimizer is stochastic, and even *scoring is* — re-score a
 frozen, unchanged agent on the same sealed split and 20–40% of the items flip
 their verdict between repetitions. We measured this directly by re-scoring
@@ -223,66 +282,12 @@ this section will be re-cut as reps accumulate. What it already shows is
 the shape of the field at this budget: gains exist, they are small, and
 without the floor they would be indistinguishable from luck.
 
-## Overfitting: dev vs. sealed test
-
-The 28 sealed runs of the current slice — two meta models, 14 runs per
-carrier, \$28–133 of search each — compress into one pair of bars per
-split (@fig-devtest-bars). On dev, optimization essentially always
-"works": every GPQA run and 11 of 14 τ² runs end above their genesis, for
-a mean claimed lift of **+0.044** on GPQA and **+0.088** on τ². (The
-three τ² exceptions are interrupted runs whose only checkpoint *is* the
-genesis — searches that never claimed a lift, not ones that lost ground.)
-On the sealed split the same selected candidates keep **−0.002** and
-**+0.019** — both inside the noise floor measured above — and on each
-benchmark exactly **half** the runs land above their genesis at all. After
-tens of dollars of search per run, whether the product beats its own seed
-on unseen items is a coin flip.
-
-![The lift that survives the seal. Left: mean lift over genesis on the
-split the optimizer could see (blue) vs. the sealed split (orange);
-whiskers are SEs across the 14 runs per carrier. Right: the share of runs
-whose selected candidate beats its genesis at all; the dashed line is
-50%.](figures/dev_test_bars.png){#fig-devtest-bars width=100%}
-
-The aggregate hides what the failure looks like from inside a single run.
-@fig-devtest-case is one: `meta_harness` on τ²-bench, minimal seed, Opus
-5 proposing. To the optimizer this run is a success — dev climbs from
-0.582 to a selected best of **0.685**. We posthoc-scored every distinct
-candidate the run produced on the sealed split, three reps each. The
-sealed curve tells the opposite story: the *second* candidate was the
-run's true peak (**0.564**, +0.019 over genesis), and every candidate
-after it scored worse — down to **0.461** at the end, 0.084 *below* the
-seed. The method wasn't merely failing to improve; it held its best
-candidate at checkpoint 2 and spent the remaining ~\$60 of search
-optimizing away from it, guided by a dev signal that kept rewarding the
-walk.
-
-![One run from the inside. Dev score of each checkpoint (blue) vs.
-sealed-test score of the same candidates (orange), placed at the
-checkpoint where each candidate first appeared; dotted lines mark the
-genesis score on each split. Dev and test disagree not just on how much
-was gained but on *which direction the run was
-moving*.](figures/dev_test_case.png){#fig-devtest-case width=88%}
-
-### Where train, dev, and test come from
-
-The splits are built to be IID: fixed near-equal
-thirds (GPQA **65/67/66**, τ² **54/55/55**), committed as id lists, and
-stratified so every split carries the identical domain mix — GPQA's
-biology/chemistry/physics proportions, τ²'s airline/retail balance
-(a flat shuffle had left GPQA's test physics-heavy). Selection on dev is
-also score-only: a method may evaluate a candidate there as often as its
-budget allows, but all it gets back is a single scalar — no per-item
-verdicts, no transcripts, no gold. Only train exposes full feedback. Dev
-and test are therefore the same measurement on different items, so any
-dev→test gap is selection pressure on a finite, noisy dev split — not
-leakage, and not distribution shift.
-
 ## The worker axis: headroom is the method's whole paycheck
 
-Everything above ran one worker, `haiku-4.5`. Two further slices hold the
-protocol fixed and move the worker — one down, one up — and together they
-produce the sharpest and least comfortable finding of this evaluation.
+The floor and first-results sections ran one worker, `haiku-4.5`; the
+overfitting section ran the frontier. Hold the protocol fixed and move
+the worker — one slice down from haiku, one up — and the slices line up
+into the sharpest and least comfortable finding of this evaluation.
 
 **Down first.** On GPQA with `GPT-OSS-120B` as the worker (seed floor
 ≈ 0.65–0.70) and `opus-5` proposing, the instrument finally shows what
@@ -294,10 +299,10 @@ seed and reproduces across all three. So the protocol is not incapable of
 detecting differences between methods; it detects them fine, *when they
 exist*.
 
-**Now up.** Two collaborator batches ran the same grid with
-**`gpt-5.6-luna`** as the worker — one with `claude-opus-5` as the
-meta-agent, one with `gpt-5.6-sol` — across GPQA, τ²-bench, and CharXiv,
-roughly forty cells. On GPQA, where luna's untouched seeds already score
+**Now up.** The frontier slice is the collaborator batches from the
+overfitting section — **`gpt-5.6-luna`** as the worker, one batch under
+the `claude-opus-5` meta, one under `gpt-5.6-sol` — across GPQA,
+τ²-bench, and CharXiv, roughly forty cells. On GPQA, where luna's untouched seeds already score
 **0.83–0.90**, the mean sealed lift is **+0.9pp** under the opus-5 meta
 and **−0.6pp** under sol — null under both, while the *dev* side was
 reporting selected candidates as high as 0.92. On CharXiv (seed floors
