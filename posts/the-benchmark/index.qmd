@@ -12,6 +12,22 @@ aliases:
   - /posts/01-setup-and-protocol/
 ---
 
+Start with the one result we most want you to take away. When a machine
+optimizes an agent, it grades its progress on data it can see — and on
+that data, improvement is nearly guaranteed. Across the forty-one runs in
+our grid that used a frontier worker, the methods' own selected candidates
+claimed a mean **+4.4 points** on GPQA-Diamond, **+8.8** on τ²-bench,
+**+4.1** on CharXiv. Scored on a
+sealed test split the optimizer never touched, those same candidates kept
+**−0.2**, **+1.9**, and **+1.5** — and on GPQA and τ², exactly half the
+runs ended above the agent they started from at all. Nearly everything
+the optimizer believes it gained is selection pressure on a small, noisy
+dev split; the part that survives the seal sits at or barely above the
+noise of re-scoring an *unchanged* agent. That gap — between the lift a
+method reports and the lift that exists — is the finding this post is
+organized around, and the reason its title says *evaluation*, not
+*benchmark*.
+
 There are roughly two ways to make an agent better. You can improve the model —
 pretraining, RL, post-training of every flavor — or you can improve the
 *program* wrapped around it: the prompts, the workflow, the tools, the
@@ -113,12 +129,12 @@ reuse in personal agents — and having now run our own instrument across
 some eighty cells, four workers, and three meta-models, our most confident
 conclusion is about the measurement itself: at today's effect sizes and
 noise levels, no protocol we know of — ours included — can stably rank
-optimization methods, let alone the models running them. The typical lift a
-method produces is smaller than the run-to-run noise of re-scoring an
-*unchanged* agent; the score a run reports for itself routinely disagrees
-with the score a sealed re-evaluation assigns the same candidate; and the
-gains that do clear the noise appear and disappear with worker headroom. A
-leaderboard built on numbers like these would be ranking luck.
+optimization methods, let alone the models running them. The dev–test gap
+that opened this post is one reason. The other two: the lifts that survive
+the seal are typically smaller than the eval's own run-to-run noise, and
+the gains that do clear the noise appear and disappear with worker
+headroom. A leaderboard built on numbers like these would be ranking
+luck.
 
 So we are publishing this as what it turned out to be: an **evaluation and
 analysis**. The rest of the post is the evidence — the noise floor every
