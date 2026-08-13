@@ -55,18 +55,56 @@ baselines appear at all, its own reimplementation of the competition. The
 numbers never meet. A field that cannot compare its methods cannot tell whether
 it is making progress.
 
-![What comparison under one protocol looks like — an early sweep of thirteen
-optimizers on BBH-hard, same seed agent, same budget meter. Ranks reorder as
-budget grows; a leaderboard is just the right-hand edge of this
-plot.](figures/anytime_curve_bbh_named.png){#fig-anytime-bbh width=100%}
+MABench is our attempt at the measuring stick, and the design fits in two
+paragraphs. The fixed point of every run is a **seed agent paired with a
+dataset**; that pairing never varies within a comparison. What varies is
+the thing under test: an **optimization method running on a model** —
+vendored verbatim, never reimplemented — handed a copy of the seed, a
+metered budget, and nothing else. The method owns its search loop and may
+do anything to the agent: rewrite its prompt, restructure its workflow,
+edit its source, spawn its own LLM calls to think with. The framework owns
+everything that has to be common for the comparison to mean anything:
+identity, scoring, budget, metering. While the method searches, the
+framework records — every candidate stored content-addressed with its
+ancestry, every propose/evaluate/decide event traced, every token metered
+and attributed — and the test split stays **sealed**: the method declares a
+checkpoint whenever it believes it has a new best, and the framework scores
+those checkpoints later, on items the method's interface simply cannot
+reach. The method never grades itself. A run's result is one number with a
+receipt: how far the sealed test score moved over the seed's, and what that
+cost.
 
-MABench is our attempt at the measuring stick. It runs agent-optimization
-methods — vendored verbatim, never reimplemented — against the same seed
-agents, on the same task suites, under the same metered budget, with test
-scores sealed until the run is over. The method is the only variable. The
-deliverable is not a leaderboard number but an anytime curve — how much lift
-over the seed agent a method buys per dollar spent — reported across a grid of
-tasks, seeds, and budgets.
+| Carrier | The task | Base | Medium | Advanced |
+|---|---|---|---|---|
+| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
+| **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
+| **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
+| **Terminal-Bench-2** | terminal / coding tasks in containers | minimal command loop | plan · reflect · explore | Terminus |
+
+: The grid. Each carrier ships one base seed and literature-pattern
+variants arranged by scaffold complexity; each variant exposes a different
+edit surface, so a method's lift has to generalize across agent shapes
+rather than fit one. The seed floors are not flat — on GPQA alone the five
+seeds span 0.58 to 0.69 — which is why every result is Δ over *its own*
+seed, never over a pooled baseline. {#tbl-suite}
+
+And the one taxonomy fact needed to read the results: methods differ on
+the **surface** they edit — *context* (prompts, skills, memories) or
+*program* (source, control flow, the workflow graph) — and on their
+**coupling** to the agent. *Agnostic* methods (GEPA, Meta-Harness,
+AdaEvolve) improve any seed you hand them; *exogenous* designers (ADAS,
+AFlow) grow their own artifact from their own genesis; *endogenous*
+methods (DGM, SICA) **are** the agent, rewriting itself. Coupling
+determines what a fair comparison even is — an agnostic method can be
+swept across seeds, an agent-native one can only be scored against the
+same seed floor on its own carrier — and the protocol is built around
+that distinction.
+
+![The run, end to end: a pre-wired workspace (benchmarks × worker agents,
+pinned splits), a method plugged in running its own propose → evaluate →
+decide loop, and the substrate around it recording every method event and
+candidate version — jailed so the run has no reach to the
+score.](figures/workspace_slide.png){#fig-workspace width=100%}
 
 But this post is not a benchmark release, and we want to be precise about
 why. Benchmarks are starting to appear in this space — Evo-Bench
@@ -83,116 +121,15 @@ gains that do clear the noise appear and disappear with worker headroom. A
 leaderboard built on numbers like these would be ranking luck.
 
 So we are publishing this as what it turned out to be: an **evaluation and
-analysis**. The first half explains the protocol — what a run is, what gets
-measured, and why the design choices matter. The second half reports what
-the instrument recorded: where lift is real, where it evaporates under the
-seal, and why the strongest models are the hardest to improve. The closing
-section turns the failures into an agenda — what a benchmark of this kind
-would need before its rankings mean anything.
-
-## Taxonomy of meta-optimization
-
-At first glance the methods have nothing in common. A prompt evolver mutates
-strings; a workflow searcher grows a graph; a self-improving agent edits its
-own source and becomes its own successor. Two axes are enough to locate every
-published method — and once placed, methods that looked incomparable become
-rows of the same table.
-
-**Surface** is what medium the method edits. *Context* methods change what
-the agent reads — prompts, skills, memories — and leave the code alone.
-*Program* methods change what the agent is — source, control flow, the
-workflow graph itself.
-
-**Coupling** is how bound the optimizer is to the agent it optimizes.
-*Agnostic* methods take an arbitrary seed agent and hand back that same
-agent, improved — the output stays in the seed's representation. *Exogenous*
-methods are separate designers that own their own representation: ADAS or
-AFlow output their own graph artifact, anchored to their own genesis, not
-your seed transformed. *Endogenous* methods **are** the agent — it rewrites
-itself, so every accepted edit also upgrades the thing doing the editing.
-
-| coupling ↓ · surface → | **context** — prompts · skills · memories | **program** — code · control flow · graphs |
-|---|---|---|
-| **agnostic** — works on any seed agent | prompt optimization: GEPA · TRIPLE · CAPO | coding-agent search: Meta-Harness · CRO · AdaEvolve |
-| **exogenous** — a separate designer, its own representation | *open cell — no published method* | automated agent design: ADAS · GPTSwarm · AFlow · MaAS |
-| **endogenous** — the agent rewrites itself | self-evolving skills & memory: Hermes | self-evolving agents: DGM · HGM · SICA · STOP · Gödel-Agent |
-
-: Every published family lands in one cell. {#tbl-taxonomy}
-
-Two things fall out of this table. The small one: a cell is empty — as far
-as we can tell, no published method searches the context surface from an
-exogenous designer's seat. The taxonomy is not just a filing system; an
-empty cell is a research direction. The load-bearing one: **coupling
-determines what a fair comparison even is.** An agnostic method can be
-dropped onto any seed in a grid and scored on how far it lifted that seed.
-An agent-native method — exogenous or endogenous — carries its own genesis:
-you can score its artifact against the same seed floor on the same dataset,
-but sweeping it across foreign seeds is meaningless. A protocol that
-ignores this ends up grading a graph-grower on a test only prompt-rewriters
-can take. Ours is built around it.
-
-## Anatomy of a run
-
-The fixed point of every run is the thing being improved: a **seed agent
-paired with a dataset** — a bare one-shot prompt on GPQA-Diamond, a
-tool-using scaffold on a terminal benchmark. That pairing is the ground truth
-of the evaluation; it never varies within a comparison. What varies is the
-thing under test: an **optimization method running on a model**, handed a copy
-of the seed and a budget and left alone with it. The method can do whatever it
-likes to the agent — rewrite its prompt, restructure its workflow, edit its
-source, spawn its own LLM calls to think with. We deliberately impose no
-structure on the search loop. The method owns its loop; the framework owns
-everything that has to be common for the comparison to mean anything:
-identity, scoring, budget, and metering.
-
-| Carrier | The task | Base | Medium | Advanced |
-|---|---|---|---|---|
-| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
-| **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
-| **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
-| **Terminal-Bench-2** | terminal / coding tasks in containers | minimal command loop | plan · reflect · explore | Terminus |
-
-: The current grid. Each carrier ships one base seed and four
-literature-pattern variants, arranged by scaffold complexity: the base is
-the bare pattern, medium seeds add one mechanism to it, advanced seeds are
-multi-stage or multi-agent. Every seed is a launchable agent tree paired to
-a matched data split. {#tbl-suite}
-
-The variants are the point, not decoration: each exposes a different edit
-surface — a debate seed has roles to retune, a PoT seed has code to fix, a
-tree-search seed has a policy to steer — so a method's lift has to
-generalize across agent shapes rather than fit one. And the seed floors are
-not flat: on GPQA the five seeds already span 0.58 to 0.69 before any
-optimizer touches them, which is why every result is Δ over *its own* seed,
-never over a pooled baseline.
-
-Each run produces one core result: **how far the method lifted the seed's
-sealed test score, and what it spent to get there** — Δ over seed, priced,
-traced out over the whole budget as an anytime curve. Every mechanism in the
-rest of this section exists to make that one number trustworthy.
-
-While the method searches, the framework records. Every event the method
-emits — propose, evaluate, decide — lands in a typed trace; every candidate
-it builds is stored content-addressed with a pointer to its parent, so the
-run leaves behind the full genealogy of the search, not just its winner; and
-every token is metered and attributed per actor, to the meta-agent (the
-optimizer thinking) or to the workers (the agent doing tasks). On top of that
-record sits the **stamp**, the one thing the method itself declares: whenever
-it believes it has a new best candidate, it says so. Each stamp freezes the
-ledger reading at that moment, and the stamped candidates are scored — later,
-by the framework — on the sealed test split. The sequence of
-(spend-at-stamp, test score) points *is* the anytime curve. The method never
-grades itself.
-
-![The run, end to end: a pre-wired workspace (benchmarks × worker agents,
-pinned splits), a method plugged in running its own propose → evaluate →
-decide loop, and the substrate around it recording every method event and
-candidate version — jailed so the run has no reach to the
-score.](figures/workspace_slide.png){#fig-workspace width=100%}
+analysis**. The rest of the post is the evidence — the noise floor every
+claim has to clear, what survived the sealed split and what evaporated
+there, why the strongest worker is the hardest to improve — and, closing,
+what a benchmark of this kind would need before its rankings mean
+anything.
 
 ## The noise floor
 
-There is one more thing a benchmark of optimizers has to face squarely:
+The first thing the instrument measures is its own error bar, because
 this field is noisy in a way most benchmarks are not. The workers are
 stochastic, the optimizer is stochastic, and even *scoring is* — re-score a
 frozen, unchanged agent on the same sealed split and 20–40% of the items flip
@@ -236,7 +173,7 @@ extrapolation.](figures/noise_floor.png){#fig-noise width=88%}
 
 When the budget runs out, the run is over. What survives is everything the
 comparison needs and nothing the method can spin: the candidate graph, the
-stamped curve, the ledger, the full trace — and a floor measurement that says
+checkpointed curve, the ledger, the full trace — and a floor measurement that says
 how big a lift has to be before it means anything. That is the protocol.
 Here is what happened when we pointed it at real methods.
 
@@ -420,7 +357,7 @@ The caveats, stated in full because this is the spiciest claim in the
 post. The luna batches are mid-flight snapshots, not sealed runs — their
 summaries all read `running`, so every number is our posthoc re-scoring of
 the genesis and the best *checkpointed* candidate (three reps, sealed
-split), which measures "the best the method had stamped", not its final
+split), which measures "the best the method had checkpointed", not its final
 selection. Three τ² cells had checkpointed nothing but their genesis and
 contribute only floors. A provider-side API change (2026-08-08) means the
 posthoc worker ran under slightly different decoding defaults than the
@@ -440,7 +377,7 @@ The grid is still filling in, so the rest of the results are written here
 as protocol, not findings: for each question, what we measure, which
 artifact it reads from, and what would count as an answer. None of it
 needs new instrumentation — every analysis below runs off the record a
-run already leaves behind (the candidate graph, the stamped curve, the
+run already leaves behind (the candidate graph, the checkpointed curve, the
 ledger, the sealed scores). The numbers land as the cells finish.
 
 ### Reading each method on its own terms
@@ -613,7 +550,8 @@ more than a few of them.
 4. **Match and meter the budget, and report the curve.** A lift is a
    price, not a point: methods differ in where on the spend curve their
    gains arrive, and a fixed-budget snapshot reorders ranks as the
-   budget moves (@fig-anytime-bbh). Per-actor metering — optimizer
+   budget moves — in an early thirteen-optimizer sweep of ours on
+   BBH-hard, ranks kept reordering as the meter ran. Per-actor metering — optimizer
    thinking vs. worker rollouts — is what makes "at what cost" answerable
    at all.
 
