@@ -8,7 +8,8 @@ asks what separates the survivors.*
 
 ## The population
 
-Classifying all 39 joined cells by sealed-test delta (luna worker):
+Classifying the 39 cells that join an artifact diff to a sealed-test delta (3 of the 42
+scored cells lack one side of the join), by delta under the luna worker:
 
 | group | n | dev tasks improved (mean) | top-3 share of dev gain | code changed | headroom (1−genesis) | prompt growth |
 |---|---|---|---|---|---|---|
@@ -19,8 +20,8 @@ Classifying all 39 joined cells by sealed-test delta (luna worker):
 Correlations with test delta across cells: headroom **+0.33**, breadth of dev improvement
 **+0.34**, code-changed +0.13 (within GPQA: **+0.44**), dev-eval count −0.21, prompt
 growth −0.06. No single mechanical feature dominates — and one deliberate null result:
-**dev→test shrinkage is a flat ~5-pt tax** (+5.8 pts at ≤35 dev reads, +4.8 at >35;
-corr with log reads +0.03). The winner's curse saturates after a handful of noisy reads;
+**dev→test shrinkage is a flat ~5-pt tax** (dev gain exceeds test gain by 5.8 pts at
+≤35 dev reads, by 4.8 at >35; corr with log reads +0.03). The winner's curse saturates after a handful of noisy reads;
 what varies across cells is not how much phantom gain was banked, but whether anything
 *real* was banked underneath it.
 
@@ -50,8 +51,10 @@ quarter the size, in both meta arms.
 **4. The clean-edit control: structure without headroom still fails.** Opus's
 GPQA-strong MH winner is exactly the artifact shape that transfers elsewhere — a blind
 third-solver escalation, *shrunken* prompts, per-instance evidence quarantined in the
-design docstring, zero memorization — and it still went −2.0 on the sealed test (dev
-.915). GPQA-strong genesis is .87–.89 with the entire remaining gap inside one SE.
+design docstring, zero memorization — and it still failed to transfer (dev .915; test
+−2.0 under the matched-batch genesis pairing, 0.0 under the headline pairing in
+results.md — nothing outside the noise band either way). GPQA-strong genesis is .87–.89
+with the entire remaining gap inside one SE.
 **Memorization is therefore a symptom, not the root cause: when no generalizable
 headroom is reachable, fitting the visible split is the only direction in which dev can
 still move, and the noisy selector cannot refuse it.**
@@ -84,9 +87,15 @@ method has a mechanism that distinguishes repair from memorization at selection 
   top-3 concentration ~0.2–0.4; failing winners improved 3–11 with concentration up to
   1.0. Computable from eval events already recorded.
 - **Worker-swap probe**: gains that survive a worker change are never split-fitting
-  (τ²-strong passed both frames; the GPQA answer key collapsed .864→.667 on haiku).
+  (τ²-strong passed both frames; gains calibrated to luna's failure profile inverted —
+  sol GPQA-strong MH went +3.5 luna → −3.5 haiku).
 - **Train-leakage grep**: verbatim n-gram overlap between candidate prompts and
   `workspace/train/` catches every memorization case found here (GPQA sol+opus,
   CharXiv sol, τ²-minimal residue) with zero false positives on the transferring
   winners — the τ²-strong tokens flagged came from rollout traces, not train files,
   and carried no answers.
+- **Early acceptance-rate monitor (GEPA)**: healthy runs accept 25–50% of proposals in
+  the first budget quintile; the derailed memorizers accept 94–95% (answer-pasting
+  passes the minibatch gate almost automatically). Combined with the leakage grep at
+  10% of budget, this flags every derailed run before a tenth of the spend —
+  [gepa-run-anatomy](gepa-run-anatomy.md).

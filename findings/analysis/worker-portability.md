@@ -16,9 +16,10 @@ below is Δ measured *within* the haiku frame.
 
 ## What survives, what doesn't
 
-- **τ²-strong gains survive fully, in both arms** — sol +6.1/+4.8, opus +6.7/+7.9,
-  essentially matching their luna-frame gains. Real improvements to a weak scaffold
-  travel across a 2-tier worker downgrade.
+- **τ²-strong gains survive, in both arms** — sol +6.1/+4.8, opus +6.7/+7.9, matching
+  their luna-frame gains in sign and rough size (sol strong-mh softened +8.5 → +4.8, a
+  ~1σ drop; the rest sit within 1–2 pts). Real improvements to a weak scaffold travel
+  across a 2-tier worker downgrade.
 - **GPQA medium-tier gains survive** (+2.5 to +4.5, both arms) — the only GPQA tier
   where luna-frame gains were also arguably real.
 - **GPQA strong-tier gains invert** (sol −4.0/−3.5, opus −1.5/−1.0): candidates tuned

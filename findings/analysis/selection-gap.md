@@ -50,9 +50,9 @@ Methods do not report the mean of their dev reads; they select the **max**:
 
 | method | dev reads per run | selection rule |
 |---|---|---|
-| GEPA | 27–234 | instance-level Pareto over the dev set + dev-gated promotion |
+| GEPA | 26–234 | instance-level Pareto over the dev set + dev-gated promotion |
 | Meta-Harness | 15–35 | best-by-dev stamp (dev not native to the method) |
-| AdaEvolve | ~3–6 (instrumentation only) | train-mean only; dev never gates |
+| AdaEvolve | ~2–6 (instrumentation only) | train-mean only; dev never gates |
 
 The expected max of N noisy reads at SE 0.04 sits 1.5–2.5 SE above the true value for
 N in the 20–200 range — i.e. a **+3 to +6 pt phantom gain**, which is the size of the
@@ -71,13 +71,24 @@ GEPA's instance-level Pareto is the aggravating factor: it doesn't just select o
 noisy scalar, it *fits the per-instance accept/reject pattern* of the dev split. Its
 GPQA-minimal run made 211 full dev evaluations; its winner lost 4.0 pts on test.
 
+One reconciliation note: the shrinkage *magnitude* is roughly flat in read count
+([generalization-contrast](generalization-contrast.md)) — the curse saturates after a
+handful of noisy reads — so the ordering above is carried by *how* each method selects
+(instance-level fitting, candidate-pool size), not by read volume per se.
+
 ## Where gains are real: headroom
 
 The exceptions are systematic, not random. τ²-strong has the weakest genesis in the
 grid (test ≈ .43) and realized 63–74% of its dev gains (+6.1 to +8.5 test on the sol
-arm; positive in every arm×worker frame). GPQA (genesis .87) and CharXiv (.72) gave the optimizers little true
-headroom, so search mostly harvested eval noise. **Realized gain ≈ f(headroom) ×
-g(selection pressure)** describes all 42 cells with no outlier worse than 1σ.
+arm; positive in every arm×worker frame). The realized *fraction* is pairing-sensitive:
+τ² dev stamps are noisy enough that the same strong seed stamped .47 in one run and .64
+in another, and under the gepa_state pairing the strong-GEPA cell realizes >100% of a
+much smaller dev gain — the robust claim is the direction, not the fraction. GPQA
+(genesis .87) and CharXiv (.72) gave the optimizers little true headroom, so search
+mostly harvested eval noise. Qualitatively, **realized gain tracks headroom × selection
+pressure** — no cell contradicts the pattern by more than 1σ, though the fitted
+correlates are modest (headroom +0.33, breadth +0.34; see
+[generalization-contrast](generalization-contrast.md)).
 
 ## Sign flips inside the noise band
 
@@ -94,6 +105,6 @@ Two concrete reminders that ±4 pts is one sigma here:
 2. **Charge dev reads to the budget and average reps at selection time.** A method that
    buys 200 dev reads is buying max-statistic inflation.
 3. **Confirmation evals**: select on dev, confirm on a disjoint dev subsample before
-   stamping — a cheap shrinkage correction that would have flipped GEPA's sign.
+   stamping — a cheap shrinkage correction that would plausibly have flipped GEPA's sign.
 4. **Match claimed lifts against the ~6 pt / 2σ bar** the blog's noise-floor section
    already establishes. Only τ²-strong clears it in this sweep.

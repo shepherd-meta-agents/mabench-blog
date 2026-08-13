@@ -11,7 +11,7 @@ Dev splits: 67/66/55 items × 3 reps. **One full test or dev eval carries SE ≈
 Setup: worker `gpt-5.6-luna` during optimization; meta model `gpt-5.6-sol` (sol arm) or
 `claude-opus-5` (opus5 arm); τ² user-sim `gpt-5.4-mini`; CharXiv judge `gpt-5.4-mini`;
 ~72 h wallclock budget per run; seed tiers minimal / medium / strong; methods GEPA,
-Meta-Harness (MH), AdaEvolve (minimal tier only).
+Meta-Harness (MH), AdaEvolve (minimal tier only). Cell suffixes s0/s1 are run seeds.
 
 ## 1. Sealed test, luna worker (primary metric)
 
@@ -88,13 +88,13 @@ Baseline effect of the swap: GPQA genesis drops .86→.61, CharXiv .72→.57, τ
 | cell | sol Δ | opus5 Δ |
 |---|---|---|
 | gpqa medium-gepa / medium-mh | +2.5 / +3.5 | +3.5 / +4.5 |
-| gpqa minimal-gepa / minimal-mh / ada | −0.7 / +0.8 / +1.9 | −1.7 / −1.7 / +1.9 |
+| gpqa minimal-gepa / minimal-mh / ada | −0.7 / +0.8 / +1.9 | −1.5 / −1.5 / +1.9 |
 | gpqa strong-gepa / strong-mh | −4.0 / −3.5 | −1.5 / −1.0 |
 | τ² minimal-gepa / minimal-mh / ada | +1.8 / 0.0 / **+13.3** | −1.2 / −0.6 / — |
 | τ² medium-gepa / medium-mh | +1.8 / +1.2 | — / — |
 | τ² strong-gepa / strong-mh | **+6.1** / +4.8 | **+6.7** / **+7.9** |
 | charxiv medium (gepa-s0/s1, mh-s0/s1) | +4.0 / −2.5 / +4.0 / — | +3.0 / −2.0 / +2.0 / **+7.1** |
-| charxiv minimal (gepa/mh/ada) | −3.5 / +1.0 / −4.5 | −2.5 / −1.5·−0.5 / −2.0 |
+| charxiv minimal (gepa/mh/ada) | −3.5 / +1.0 / −4.5 | −2.5 / −1.5 (s0) · −0.5 (s1) / −2.0 |
 | charxiv strong-gepa | −2.5 | −2.5 |
 
 Pattern: τ²-strong gains and GPQA-medium gains survive the swap in both arms; GPQA-strong
@@ -118,17 +118,25 @@ Full table: [data/run_stats.csv](data/run_stats.csv). Representative rows:
 | opus5 charxiv minimal **gepa** | 524 | 191 | $55 | $22 | 83% |
 | opus5 charxiv minimal **mh** | 88 | 81 | $88 | $58 | 20% |
 
-Signatures: GEPA = many candidates, eval-dominated spend, winner arrives late, 40–60%
-of proposals rejected. MH = few candidates, meta-heavy spend (up to 66% for opus),
-winner early then plateau. AdaEvolve = hundreds of program candidates, train-only
-selection (dev touched ~3–6× for stamping), improvement in rare jumps.
+Signatures: GEPA = many candidates, eval-dominated spend, winner timing a lottery
+(from under 10% to over 90% of budget; best-dev moves in only 1–5 discrete jumps per
+run), 40–60% of
+proposals rejected in healthy runs but 96–98% *accepted* in the derailed memorizers
+([gepa-run-anatomy](analysis/gepa-run-anatomy.md)). MH = few candidates, meta-heavy
+spend (up to 66% for opus), winner early then plateau. AdaEvolve = hundreds of program
+candidates, train-only selection (dev touched ~2–6× for stamping), champion-parent
+hill-climb whose accepted steps (mostly +1 train task) sit below per-eval noise
+([adaevolve-dynamics](analysis/adaevolve-dynamics.md)).
 
 ## Measurement caveats
 
 1. **Test noise is ~1σ = 3.6 pts.** Same-digest rescores disagree by up to 2 pts (GPQA
    minimal genesis: .874 and .854 in the same batch). One documented sign flip: sol
    gpqa-minimal-mh's best scored **+4.0 vs genesis** in the posthoc batch but **−1.0**
-   in the run's own `test_curve` — same artifact, opposite conclusion.
+   in the run's own `test_curve` — same artifact, opposite conclusion. Train evals are
+   just as noisy: identical AdaEvolve code scored .892–.954 across five GPQA train
+   evals (a 4-task spread), and the identical τ² seed scored .481 in one run and .593
+   in another.
 2. **Route confound (τ²).** The `openai/responses` route with default sampling scores the
    *same genesis digest* +8 to +13 pts above the chat-completions route (.606 vs .527
    minimal; .558 vs .430 strong). Opus5 τ² comparisons use matched-route baselines; the
@@ -136,12 +144,18 @@ selection (dev touched ~3–6× for stamping), improvement in rare jumps.
 3. **Best-by-dev ≠ trace-best.** For sol gpqa-strong-mh, the trace's best stamp is dev
    .920 but the posthoc "best" digest carries dev .866 — the posthoc selection used the
    stamped/registered candidate set. Similar small mismatches likely elsewhere.
-4. **Incomplete cells.** Opus5 τ²-medium (all) and minimal-ada never improved (runs
-   unsealed / mid-flight at snapshot); several opus5 CharXiv GEPA runs died at launch
-   (`method_launch:TimeoutExpired`); two opus5 CharXiv MH bests are checkpoints recovered
-   from corrupt traces. Both sol CharXiv MH runs lost their codex proposer to session
-   crashes mid-run (medium-mh after iteration 8 of 40, minimal-mh after 12) — their
-   "best" candidates predate the crash. All seed-1 runs except CharXiv are 1–2 h stubs.
+4. **Incomplete cells** (qualified after run-tree reads — earlier drafts overstated
+   this). Opus5 τ²: medium-GEPA is a 3 h stub and medium-MH ran 63 h without ever
+   improving; both τ² AdaEvolve runs were cut at ~82–88 of 200 planned iterations
+   (unsealed); but τ² minimal/strong GEPA **completed** (86–95 candidates each). Opus5
+   CharXiv: the seed-1 GEPA runs died at launch (`method_launch:TimeoutExpired`); the
+   seed-0 GEPA runs completed full 72 h budgets (421–524 candidates); two opus5 CharXiv
+   MH bests are checkpoints recovered from corrupt traces. All three sol CharXiv MH runs
+   lost their codex proposer to session crashes mid-run (strong-mh after 9 scored
+   candidates — hence no strong-mh row in the CharXiv table; medium-mh after iteration
+   8 of 40; minimal-mh after 12) — the surviving "best" candidates predate the crashes.
+   All seed-1 runs are 1–2 h stubs; only the CharXiv seed-1 stubs registered scoreable
+   bests (kept in the table above).
 5. **AdaEvolve's genesis** is its own stamped iter-1 program, not the shared tier genesis
    — its Δ baselines differ from GEPA/MH in the same tier.
 6. **CharXiv judge** is `gpt-5.4-mini` throughout; judge noise is inside the reported SE.
