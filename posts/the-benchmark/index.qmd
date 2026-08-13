@@ -1,10 +1,11 @@
 ---
-title: "MABench: The Benchmark"
-subtitle: "How to benchmark the thing that improves the agent — and what happened when we did."
+title: "Machines Improving Agents: An Evaluation, Not (Yet) a Benchmark"
+subtitle: "What we learned running agent optimizers under MABench's sealed protocol — and what a real benchmark of this field would take."
 date: "2026-08-05"
+date-modified: "2026-08-13"
 author:
   - name: "TODO — author list"
-categories: [meta-agents, benchmark, protocol]
+categories: [meta-agents, evaluation, analysis, protocol]
 bibliography: references.bib
 draft: false
 aliases:
@@ -65,9 +66,29 @@ agents, on the same task suites, under the same metered budget, with test
 scores sealed until the run is over. The method is the only variable. The
 deliverable is not a leaderboard number but an anytime curve — how much lift
 over the seed agent a method buys per dollar spent — reported across a grid of
-tasks, seeds, and budgets. The first half of this post explains the protocol:
-what a run is, what gets measured, and why we made the design choices we did.
-The second half reports what happened when we ran it.
+tasks, seeds, and budgets.
+
+But this post is not a benchmark release, and we want to be precise about
+why. Benchmarks are starting to appear in this space — Evo-Bench
+[@evobench] for harness evolution, PAST-Bench [@pastbench] for experience
+reuse in personal agents — and having now run our own instrument across
+some eighty cells, four workers, and three meta-models, our most confident
+conclusion is about the measurement itself: at today's effect sizes and
+noise levels, no protocol we know of — ours included — can stably rank
+optimization methods, let alone the models running them. The typical lift a
+method produces is smaller than the run-to-run noise of re-scoring an
+*unchanged* agent; the score a run reports for itself routinely disagrees
+with the score a sealed re-evaluation assigns the same candidate; and the
+gains that do clear the noise appear and disappear with worker headroom. A
+leaderboard built on numbers like these would be ranking luck.
+
+So we are publishing this as what it turned out to be: an **evaluation and
+analysis**. The first half explains the protocol — what a run is, what gets
+measured, and why the design choices matter. The second half reports what
+the instrument recorded: where lift is real, where it evaporates under the
+seal, and why the strongest models are the hardest to improve. The closing
+section turns the failures into an agenda — what a benchmark of this kind
+would need before its rankings mean anything.
 
 ## Taxonomy of meta-optimization
 
@@ -240,7 +261,8 @@ axis: mean Δ over the measured floor — AdaEvolve **+0.043** · GEPA
 the third decimal, to what the untouched seed scored on its own re-run.
 **Right**, the meta-model axis: every run in this slice used `opus-4.8`
 as the meta-agent, so the axis has exactly one measured value (the pooled
-Δ across all floored cells); the other planned tiers are queued, not run.
+Δ across all floored cells); the other tiers are filled in by the
+worker-axis section below.
 :::
 
 Read this against the section above. AdaEvolve leads at +0.043, and its
@@ -317,6 +339,100 @@ verdicts, no transcripts, no gold. Only train exposes full feedback. Dev
 and test are therefore the same measurement on different items, so any
 dev→test gap is selection pressure on a finite, noisy dev split — not
 leakage, and not distribution shift.
+
+## The worker axis: headroom is the method's whole paycheck
+
+Everything above ran one worker, `haiku-4.5`. Two further slices hold the
+protocol fixed and move the worker — one down, one up — and together they
+produce the sharpest and least comfortable finding of this evaluation.
+
+**Down first.** On GPQA with `GPT-OSS-120B` as the worker (seed floor
+≈ 0.65–0.70) and `opus-5` proposing, the instrument finally shows what
+method separation looks like when it is real: Meta-Harness lifts
+**+7.1 / +8.6 / +9.6pp** across three seeds (mean **+8.4pp**) while GEPA
+manages **+0.0 / +2.0 / −5.6pp** (mean **−1.2pp**) — same worker, same
+bench, same budget. The Meta-Harness lift clears the two-sigma bar in every
+seed and reproduces across all three. So the protocol is not incapable of
+detecting differences between methods; it detects them fine, *when they
+exist*.
+
+**Now up.** Two collaborator batches ran the same grid with
+**`gpt-5.6-luna`** as the worker — one with `claude-opus-5` as the
+meta-agent, one with `gpt-5.6-sol` — across GPQA, τ²-bench, and CharXiv,
+roughly forty cells. On GPQA, where luna's untouched seeds already score
+**0.83–0.90**, the mean sealed lift is **+0.9pp** under the opus-5 meta
+and **−0.6pp** under sol — null under both, while the *dev* side was
+reporting selected candidates as high as 0.92. On CharXiv (seed floors
+0.69–0.73), the mean claimed dev lift of **+4.1pp** keeps **+1.5pp** after
+the seal; one cell in thirteen clears two sigma; two end below their own
+seed. τ² is where it gets interesting: it is the one carrier where the
+frontier worker still has genuinely low floors — and exactly there, on the
+weakest seed (floor ≈ 0.43), Meta-Harness posts **+8.5pp and +10.3pp**
+under the two *different* metas: the only luna lifts to reach the bar, the
+same method that wins the OSS-120B slice, replicated across optimizer
+brains. Everywhere the frontier worker is already competent, nothing
+survives the seal; where it is weak, the same harvesting works on it that
+works on a weak model.
+
+![The whole evaluation in one frame: sealed lift over the seed against
+the seed's own floor, one point per cell, three workers. The shaded band
+is ±2σ of eval noise for the 66-item carriers; τ²'s own floor is wider
+(sd ≈ 0.03 per draw at n=55), so its points need roughly ±7pp to clear.
+Lifts above the band live at low floors regardless of which worker or
+meta produced them; the frontier worker's points hug zero wherever its
+floor is already high. The two Terminal-Bench-2 diamonds at the far left
+cut the other way: the lowest floors in the grid, and zero lift — both
+runs handed back their seed unchanged. Headroom is necessary, not
+sufficient.](figures/worker_axis.png){#fig-worker-axis width=94%}
+
+Three structural observations make this hard to dismiss. First, the null
+is **meta-independent**: swapping the optimizer's brain from
+`claude-opus-5` to `gpt-5.6-sol` — different lab, different architecture —
+moves the GPQA mean from +0.9pp to −0.6pp, i.e. not at all. And the one
+real luna lift is meta-independent too: both metas found it, on the same
+seed, with the same method. Whatever governs where lift is possible, it is
+not the meta-model. Second, the noise floor replicates across the axis:
+the same genesis digest, drawn three to four independent times in
+different cells' posthoc scoring, gives run-to-run sd ≈ **0.010–0.017** on
+CharXiv and **0.022–0.034** on τ² with a luna worker — bracketing the
+0.021 measured with haiku on GPQA. The floor is a property of the
+measurement, not of one cheap model. Third, the pattern is monotone in
+headroom *within* a single worker, not just across workers: luna's τ²
+seeds span floors from 0.43 to 0.56, and the sealed lifts fall from
++10.3pp to negative in near-lockstep as the floor rises.
+
+Put the slices side by side and the field's headline numbers reorganize
+themselves. Evo-Bench [@evobench] reports gains up to 16.6pp from
+autonomous harness refinement — concentrated, on inspection, in settings
+where the base harness is weak and the model underexploited, which is
+exactly where our OSS-120B slice and our one luna hit live too. There is
+no contradiction: **program-space search harvests headroom; it does not,
+on current evidence, create capability.** The uncomfortable corollary is
+about the future the introduction sketched. The optimizer-is-a-model-too
+argument said every model release upgrades the thing doing the improving.
+What this slice shows is that every release also *shrinks the thing being
+harvested*: on the tasks where the frontier worker is already strong —
+which are most tasks, and increasingly so — there is nothing left for
+these methods to collect, and what remains harvestable concentrates in
+the scaffold-heavy corners the worker is still bad at.
+
+The caveats, stated in full because this is the spiciest claim in the
+post. The luna batches are mid-flight snapshots, not sealed runs — their
+summaries all read `running`, so every number is our posthoc re-scoring of
+the genesis and the best *checkpointed* candidate (three reps, sealed
+split), which measures "the best the method had stamped", not its final
+selection. Three τ² cells had checkpointed nothing but their genesis and
+contribute only floors. A provider-side API change (2026-08-08) means the
+posthoc worker ran under slightly different decoding defaults than the
+original searches; genesis and best were re-scored under *identical*
+post-change conditions, so the lifts themselves are same-conditions
+comparisons — what the drift breaks is any comparison against the runs'
+own in-run records, and the possibility that a candidate tuned to the old
+decoding under-shows today. And every luna cell is a single seed, so the
+τ² Meta-Harness hit is two runs, not a distribution. None of these
+caveats rescues the dev-side numbers, though: the 0.92 dev-best claims
+are the runs' own records, and the gap between what a method believes and
+what survives the seal is the one measurement every caveat leaves intact.
 
 ## The analyses to come
 
@@ -455,15 +571,90 @@ The live instance is at
 [the run visualizer](http://127.0.0.1:8765/)<!-- TODO: local-only URL —
 replace with the public deployment before sharing this post -->.
 
+## What a reliable benchmark would take
+
+We said at the top that this is not a benchmark release. Here is the
+constructive version of that sentence. Every requirement below is
+grounded in a failure we measured, not a hypothetical — and as far as we
+can tell, no evaluation in this space (ours pre-dating this post
+included, and the concurrent benchmarks [@evobench; @pastbench]) meets
+more than a few of them.
+
+1. **Report the noise floor as a first-class number.** Re-score an
+   *unchanged* agent under the exact protocol, repeatedly, and print the
+   sd next to every result table: ours is 0.021 (GPQA, haiku worker),
+   0.010–0.017 (CharXiv, luna), and 0.022–0.034 (τ², luna — fewer test
+   items, wider floor). Any effect inside ~2σ of that floor is a tier,
+   not a rank. A headline gain reported without a floor
+   — 16.6pp or otherwise — is not interpretable, because the reader
+   cannot tell how many draws of pure noise it took to produce.
+
+2. **Power the comparison before ranking it.** At sd ≈ 0.02 on a
+   66-item test split, three scoring reps still leave per-cell standard
+   errors of 0.01–0.02, while typical method effects are one to four
+   points. The seeds-times-reps needed to resolve those effects at 2σ is
+   a computable number; a benchmark should compute it and either pay it
+   or report tiers. Our own grid, at current replication, resolves
+   exactly one method separation (Meta-Harness on OSS-120B) — and we ran
+   more repeats than is customary.
+
+3. **Seal structurally, and resolve winners from the event record — not
+   the run's say-so.** Test items must be unreachable through the
+   method's interface, so overfitting the seal is impossible rather than
+   discouraged. Just as important, and less obvious: the candidate a
+   run's headline number refers to must be recovered from the evaluation
+   events, not from the run's own summary. We found a bookkeeping
+   off-by-one in checkpoint labeling that silently swapped which
+   candidate a score was attributed to — the kind of bug that survives
+   every plot and poisons a leaderboard invisibly. Attribution needs an
+   audit path, which means the full event trace is a required artifact,
+   not a nicety.
+
+4. **Match and meter the budget, and report the curve.** A lift is a
+   price, not a point: methods differ in where on the spend curve their
+   gains arrive, and a fixed-budget snapshot reorders ranks as the
+   budget moves (@fig-anytime-bbh). Per-actor metering — optimizer
+   thinking vs. worker rollouts — is what makes "at what cost" answerable
+   at all.
+
+5. **Stratify by headroom, because lift is a property of the pair.** The
+   same method that separates cleanly on a weak worker (+8.4pp,
+   reproducible) does nothing measurable to a frontier one on the tasks
+   it is already strong at — and posts its two biggest lifts of the whole
+   grid exactly where that frontier worker's floor is lowest
+   (@fig-worker-axis). A pooled leaderboard number averages over the one
+   variable that determines whether the method works at all. Report lift
+   against seed floor, per worker tier; treat "does it still work at the
+   frontier?" as a benchmark axis, not a footnote.
+
+6. **Run validity controls like an adversary is coming.** A null-method
+   arm (search that proposes nothing) to certify the floor — ours scored
+   a lift of exactly zero, which is the only reason we trust the small
+   positive lifts elsewhere. Jailed execution for methods that run
+   LLM-authored code, because a benchmark whose harness can be
+   reward-hacked measures compliance, not capability. And failure-rate
+   reporting next to every Δ: a method that crashes a third of its runs
+   has that fact laundered by a finished-runs-only table.
+
+None of this is exotic; it is the ordinary machinery of measurement,
+applied to a field that has been sprinting too fast to install it. Our
+contribution, on reflection, is not a leaderboard — it is the instrument,
+the ~80-cell corpus of fully-traced runs, the floor measurements, and the
+two findings we believe survive every caveat in this post: **selection on
+a noisy dev split takes back most of what optimization claims, and
+current methods harvest headroom rather than create capability.** When a
+benchmark in this space can meet the six requirements above, its rankings
+will mean something. We intend MABench's next release to be judged
+against exactly that list.
+
 <!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
-     - Validity beyond noise (jail / reward-hacking, dev→test gap, construct validity)
      - Where this sits (NAS-Bench / HPOBench lineage)
      Results sections still pending (add under "First results" / "The analyses
      to come" as data accumulates):
      - The cost story (anytime curves; accuracy-per-dollar)
-     - The model axis, filled in (gpt-5.6-sol / opus-5 replacing the queued slots)
-     - Takeaways & open questions
+     - Batch B2 (OSS-20B) joins the worker-axis section when sealed (~08-14)
+     - figures for the worker-axis section: lift-vs-seed-floor scatter by worker
      Parked from an earlier draft (may return as a protocol-details section):
      the disclosure ladder — endpoint table (run_train full facets / score_dev
      scalar, charged to budget / score_test sealed / spend free) + "a method
