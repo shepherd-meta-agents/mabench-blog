@@ -70,24 +70,16 @@ noise of re-scoring an *unchanged* agent. That gap — between the lift a method
 reports and the lift that exists — is the finding this post is organized
 around, and the reason its title says *evaluation*, not *benchmark*.
 
-MABench is our attempt at the measuring stick, and the design fits in two
-paragraphs. The fixed point of every run is a **seed agent paired with a
-dataset**; that pairing never varies within a comparison. What varies is
-the thing under test: an **optimization method running on a model** —
-vendored verbatim, never reimplemented — handed a copy of the seed, a
-metered budget, and nothing else. The method owns its search loop and may
-do anything to the agent: rewrite its prompt, restructure its workflow,
-edit its source, spawn its own LLM calls to think with. The framework owns
-everything that has to be common for the comparison to mean anything:
-identity, scoring, budget, metering. While the method searches, the
-framework records — every candidate stored content-addressed with its
-ancestry, every propose/evaluate/decide event traced, every token metered
-and attributed — and the test split stays **sealed**: the method declares a
-checkpoint whenever it believes it has a new best, and the framework scores
-those checkpoints later, on items the method's interface simply cannot
-reach. The method never grades itself. A run's result is one number with a
-receipt: how far the sealed test score moved over the seed's, and what that
-cost.
+MABench is our attempt at the measuring stick. The fixed point of every
+run is a **seed agent paired with a dataset**; the thing under test is an
+**optimization method running on a model** — vendored verbatim, never
+reimplemented — handed a copy of the seed, a metered budget, and nothing
+else. The method may do anything to the agent: rewrite its prompt,
+restructure its workflow, edit its source. The one rule that matters for
+reading the results: the method **checkpoints** whatever it believes is
+its best, and only those checkpoints get scored — later, on a **sealed**
+test split the method never sees. It never grades itself. A run's result
+is how far the sealed score moved over the seed's, and what that cost.
 
 | Carrier | The task | Base | Medium | Advanced |
 |---|---|---|---|---|
@@ -114,12 +106,6 @@ determines what a fair comparison even is — an agnostic method can be
 swept across seeds, an agent-native one can only be scored against the
 same seed floor on its own carrier — and the protocol is built around
 that distinction.
-
-![The run, end to end: a pre-wired workspace (benchmarks × worker agents,
-pinned splits), a method plugged in running its own propose → evaluate →
-decide loop, and the substrate around it recording every method event and
-candidate version — jailed so the run has no reach to the
-score.](figures/workspace_slide.png){#fig-workspace width=100%}
 
 But this post is not a benchmark release, and we want to be precise about
 why. Benchmarks are starting to appear in this space — Evo-Bench
