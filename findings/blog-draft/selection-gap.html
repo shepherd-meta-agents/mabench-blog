@@ -1,0 +1,564 @@
+<title>The Selection Gap — MABench Findings</title>
+<style>
+  :root {
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --hair: #e1e0d9;
+    --baseline: #c3c2b7;
+    --accent: #1c5cab;
+    --band: rgba(137,135,129,0.10);
+    --card: #f3f2ee;
+    --gpqa: #2a78d6;
+    --tau2: #eb6834;
+    --charxiv: #1baf7a;
+    --good: #006300;
+    --bad: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --plane: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --hair: #2c2c2a;
+      --baseline: #383835;
+      --accent: #6da7ec;
+      --band: rgba(137,135,129,0.14);
+      --card: #202020;
+      --gpqa: #3987e5;
+      --tau2: #d95926;
+      --charxiv: #199e70;
+      --good: #0ca30c;
+      --bad: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --hair: #2c2c2a;
+    --baseline: #383835;
+    --accent: #6da7ec;
+    --band: rgba(137,135,129,0.14);
+    --card: #202020;
+    --gpqa: #3987e5;
+    --tau2: #d95926;
+    --charxiv: #199e70;
+    --good: #0ca30c;
+    --bad: #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 20px 96px;
+  }
+  .col { max-width: 660px; margin: 0 auto; }
+  .wide { max-width: 880px; margin: 0 auto; }
+  .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  header.masthead { padding: 64px 0 8px; }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin: 12px 0 14px;
+    text-wrap: balance;
+  }
+  .dek { font-size: 18px; line-height: 1.55; color: var(--ink-2); max-width: 52ch; margin: 0; text-wrap: balance; }
+  hr { border: 0; border-top: 1px solid var(--hair); margin: 60px auto; max-width: 880px; }
+  h2 { font-size: 23px; line-height: 1.2; letter-spacing: -0.01em; margin: 6px 0 18px; text-wrap: balance; }
+  h3 { font-size: 17px; margin: 34px 0 10px; }
+  p { margin: 0 0 18px; }
+  a { color: var(--accent); text-underline-offset: 3px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 30px 0 4px; }
+  .tile { background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 14px 16px 12px; }
+  .tile .k { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .tile .v { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-top: 5px; }
+  .tile .s { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+
+  figure { margin: 34px 0; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 20px 20px 13px; }
+  figure .ftitle { font-size: 15.5px; font-weight: 700; margin: 0 0 12px; }
+  figcaption {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; line-height: 1.55; color: var(--muted);
+    margin-top: 10px; border-top: 1px solid var(--hair); padding-top: 9px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--ink-2); margin: 0 0 10px; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .dotc { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .tooltip {
+    position: fixed; pointer-events: none;
+    background: var(--ink); color: var(--plane);
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px; line-height: 1.5; padding: 8px 10px; border-radius: 5px;
+    max-width: 260px; opacity: 0; transition: opacity 80ms linear; z-index: 10;
+  }
+  @media (prefers-reduced-motion: reduce) { .tooltip { transition: none; } }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin: 26px 0; font-variant-numeric: tabular-nums; }
+  th {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    text-align: left; font-weight: 600; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--baseline);
+  }
+  td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  td.num, th.num { text-align: right; }
+  .tblwrap { overflow-x: auto; }
+  .pos { color: var(--good); font-weight: 700; }
+  .neg { color: var(--bad); font-weight: 700; }
+  .bdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: baseline; }
+
+  /* full accounting table */
+  .full td { font-size: 13.5px; padding: 6px 14px 6px 0; }
+  .full td:first-child { color: var(--ink-2); }
+  .full tr.ghead td {
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    padding: 18px 0 7px; border-bottom: 1px solid var(--baseline);
+  }
+  .full tr.ghead .gnote {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: 0.04em;
+  }
+  .full tr.gmean td {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px; color: var(--ink-2); background: var(--card);
+    border-bottom: 0; padding: 7px 14px 7px 0;
+  }
+  .full tr.gmean td:first-child { padding-left: 8px; }
+  .tfoot {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; line-height: 1.6; color: var(--muted); margin: 10px 0 0;
+  }
+
+  /* example dropdowns */
+  details.ex { margin-top: 7px; }
+  details.ex summary {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); cursor: pointer; list-style: none; user-select: none;
+  }
+  details.ex summary::-webkit-details-marker { display: none; }
+  details.ex summary::before { content: "▸ "; }
+  details.ex[open] summary::before { content: "▾ "; }
+  details.ex .exbody { margin: 10px 0 4px; }
+  details.ex .exq {
+    display: block;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6; color: var(--ink);
+    border-left: 2px solid var(--hair); padding: 3px 0 3px 12px; margin: 0 0 7px;
+    overflow-wrap: break-word;
+  }
+  details.ex .exnote { display: block; font-size: 13px; color: var(--muted); line-height: 1.55; margin-top: 6px; }
+
+  /* method cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 22px 24px 14px;
+    margin: 26px 0;
+  }
+  .card h3 { margin: 0 0 2px; font-size: 20px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .card .ident {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .card .verdict { font-size: 15.5px; color: var(--ink-2); font-style: italic; margin: 8px 0 16px; }
+  .statrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 0 0 10px; }
+  .stat { background: var(--card); border-radius: 5px; padding: 9px 11px; }
+  .stat .k { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-size: 17px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 11.5px; font-weight: 400; color: var(--ink-2); }
+  .bench { display: flex; border: 1px solid var(--hair); border-radius: 5px; overflow: hidden; margin: 0 0 14px; }
+  .bench div { flex: 1; padding: 9px 11px; border-right: 1px solid var(--hair); }
+  .bench div:last-child { border-right: 0; }
+  .bench .k { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .bench .k i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .bench .v { font-size: 16px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .cline { display: flex; gap: 12px; font-size: 14.5px; line-height: 1.55; padding: 9px 0; border-top: 1px solid var(--hair); }
+  .cline .tag {
+    flex: none; width: 92px;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 3px;
+  }
+  .cline .tag.up { color: var(--good); }
+  .cline .tag.down { color: var(--bad); }
+  .cline .tag.mid { color: var(--muted); }
+  .cline .body { color: var(--ink-2); }
+  .cline .body b { color: var(--ink); }
+
+  .footer-note { font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="col">
+  <header class="masthead">
+    <span class="eyebrow">MABench · results section draft · sol / opus-5 sweep · 2026-08-13</span>
+    <h1>What the optimizers bought: the selection gap</h1>
+    <p class="dek">The full grid is in — GEPA, Meta-Harness, and AdaEvolve on GPQA-Diamond, τ²-bench, and CharXiv, under two meta models, winners re-scored on the sealed test. One result organizes everything else.</p>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="k">Mean dev gain</div><div class="v">+4.1</div><div class="s">pts · sol arm · 22 cells</div></div>
+    <div class="tile"><div class="k">Mean sealed-test gain</div><div class="v">+0.0</div><div class="s">same winners, same cells</div></div>
+    <div class="tile"><div class="k">Opus-5 replication</div><div class="v">+4.4 / +0.1</div><div class="s">dev / test · 20 cells</div></div>
+  </div>
+</div>
+
+<section class="wide">
+  <figure>
+    <p class="ftitle">Every cell in the grid: dev gain vs. what survived the seal</p>
+    <div class="legend" id="legend1"></div>
+    <div id="fig1"></div>
+    <figcaption>FIG — 42 cells (method × benchmark × seed tier × meta model), luna worker. x: run-stamped dev gain of the selected winner; y: posthoc sealed-test delta, route-matched. Band = ±4 pts ≈ 1σ for a single-cell delta. Hover for cell detail, including the method.</figcaption>
+  </figure>
+
+  <div class="tblwrap">
+    <table class="full">
+      <thead><tr><th>seed tier</th><th>method</th><th>meta</th><th class="num">dev: genesis → best</th><th class="num">Δdev</th><th class="num">sealed test: genesis → best (Δ)</th></tr></thead>
+      <tbody>
+<tr class="ghead"><td colspan="6"><span class="bdot" style="background:var(--gpqa)"></span>GPQA-Diamond <span class="gnote">· 14 scored cells · genesis dev/test ≈ .87</span></td></tr>
+<tr><td>minimal</td><td>GEPA</td><td>sol</td><td class="num">.841 → .866</td><td class="num">+2.5</td><td class="num">.855 → .833 (−2.2)</td></tr>
+<tr><td>minimal</td><td>GEPA</td><td>opus5</td><td class="num">.836 → .881</td><td class="num"><span class="pos">+4.5</span></td><td class="num">.855 → .854 (−0.2)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness</td><td>sol</td><td class="num">.836 → .891</td><td class="num"><span class="pos">+5.5</span></td><td class="num">.855 → .894 (+3.9)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness</td><td>opus5</td><td class="num">.826 → .891</td><td class="num"><span class="pos">+6.5</span></td><td class="num">.855 → .848 (−0.7)</td></tr>
+<tr><td>minimal</td><td>AdaEvolve²</td><td>sol</td><td class="num">.816 → .866</td><td class="num"><span class="pos">+5.0</span></td><td class="num">.855 → .859 (+0.3)</td></tr>
+<tr><td>minimal</td><td>AdaEvolve²</td><td>opus5</td><td class="num">.821 → .886</td><td class="num"><span class="pos">+6.5</span></td><td class="num">.855 → .864 (+0.8)</td></tr>
+<tr><td>medium</td><td>GEPA</td><td>sol</td><td class="num">.876 → .891</td><td class="num">+1.5</td><td class="num">.876 → .843 (−3.3)</td></tr>
+<tr><td>medium</td><td>GEPA</td><td>opus5</td><td class="num">.841 → .891</td><td class="num"><span class="pos">+5.0</span></td><td class="num">.876 → .859 (−1.8)</td></tr>
+<tr><td>medium</td><td>Meta-Harness</td><td>sol</td><td class="num">.841 → .905</td><td class="num"><span class="pos">+6.5</span></td><td class="num">.876 → .874 (−0.3)</td></tr>
+<tr><td>medium</td><td>Meta-Harness</td><td>opus5</td><td class="num">.821 → .896</td><td class="num"><span class="pos">+7.5</span></td><td class="num">.876 → .864 (−1.3)</td></tr>
+<tr><td>strong</td><td>GEPA</td><td>sol</td><td class="num">.900 → .905</td><td class="num">+0.5</td><td class="num">.869 → .874 (+0.5)</td></tr>
+<tr><td>strong</td><td>GEPA</td><td>opus5</td><td class="num">.876 → .915</td><td class="num">+4.0</td><td class="num">.869 → .884 (+1.5)</td></tr>
+<tr><td>strong</td><td>Meta-Harness</td><td>sol</td><td class="num">.886 → .920</td><td class="num">+3.5</td><td class="num">.869 → .904 (+3.5)</td></tr>
+<tr><td>strong</td><td>Meta-Harness</td><td>opus5</td><td class="num">.881 → .915</td><td class="num">+3.5</td><td class="num">.869 → .869 (+0.0)</td></tr>
+<tr class="gmean"><td colspan="3">GPQA mean · dev→test corr 0.10</td><td></td><td class="num"><span class="pos">+4.4</span></td><td class="num">Δtest +0.1</td></tr>
+<tr class="ghead"><td colspan="6"><span class="bdot" style="background:var(--tau2)"></span>τ²-bench <span class="gnote">· 11 scored cells · weakest seeds in the grid</span></td></tr>
+<tr><td>minimal</td><td>GEPA</td><td>sol</td><td class="num">.594 → .679</td><td class="num"><span class="pos">+8.5</span></td><td class="num">.527 → .545 (+1.8)</td></tr>
+<tr><td>minimal</td><td>GEPA</td><td>opus5¹</td><td class="num">.588 → .661</td><td class="num"><span class="pos">+7.3</span></td><td class="num">.606 → .594 (−1.2)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness</td><td>sol</td><td class="num">.527 → .667</td><td class="num"><span class="pos">+13.9</span></td><td class="num">.527 → .521 (−0.6)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness</td><td>opus5¹</td><td class="num">.582 → .685</td><td class="num"><span class="pos">+10.3</span></td><td class="num">.606 → .618 (+1.2)</td></tr>
+<tr><td>minimal</td><td>AdaEvolve²</td><td>sol</td><td class="num">.576 → .739</td><td class="num"><span class="pos">+16.4</span></td><td class="num">.527 → .576 (<span class="pos">+4.8</span>)</td></tr>
+<tr><td>medium</td><td>GEPA</td><td>sol</td><td class="num">.636 → .685</td><td class="num"><span class="pos">+4.8</span></td><td class="num">.539 → .533 (−0.6)</td></tr>
+<tr><td>medium</td><td>Meta-Harness</td><td>sol</td><td class="num">.558 → .691</td><td class="num"><span class="pos">+13.3</span></td><td class="num">.539 → .473 (<span class="neg">−6.7</span>)</td></tr>
+<tr><td>strong</td><td>GEPA</td><td>sol</td><td class="num">.636 → .655</td><td class="num">+1.8</td><td class="num">.430 → .485 (<span class="pos">+5.5</span>)</td></tr>
+<tr><td>strong</td><td>GEPA</td><td>opus5¹</td><td class="num">.564 → .679</td><td class="num"><span class="pos">+11.5</span></td><td class="num">.558 → .606 (<span class="pos">+4.8</span>)</td></tr>
+<tr><td>strong</td><td>Meta-Harness</td><td>sol</td><td class="num">.467 → .673</td><td class="num"><span class="pos">+20.6</span></td><td class="num">.430 → .521 (<span class="pos">+9.1</span>)</td></tr>
+<tr><td>strong</td><td>Meta-Harness</td><td>opus5¹</td><td class="num">.558 → .709</td><td class="num"><span class="pos">+15.2</span></td><td class="num">.558 → .582 (+2.4)</td></tr>
+<tr class="gmean"><td colspan="3">τ² mean · dev→test corr 0.30</td><td></td><td class="num"><span class="pos">+11.2</span></td><td class="num">Δtest +1.9</td></tr>
+<tr class="ghead"><td colspan="6"><span class="bdot" style="background:var(--charxiv)"></span>CharXiv <span class="gnote">· 17 scored cells · perception-bound</span></td></tr>
+<tr><td>minimal</td><td>GEPA</td><td>sol</td><td class="num">.717 → .747</td><td class="num">+3.0</td><td class="num">.722 → .727 (+0.5)</td></tr>
+<tr><td>minimal</td><td>GEPA</td><td>opus5</td><td class="num">.732 → .788</td><td class="num"><span class="pos">+5.6</span></td><td class="num">.722 → .732 (+1.0)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness</td><td>sol</td><td class="num">.737 → .763</td><td class="num">+2.5</td><td class="num">.722 → .697 (−2.5)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness</td><td>opus5</td><td class="num">.722 → .793</td><td class="num"><span class="pos">+7.1</span></td><td class="num">.722 → .687 (−3.5)</td></tr>
+<tr><td>minimal</td><td>Meta-Harness · s1</td><td>opus5</td><td class="num">.737 → .758</td><td class="num">+2.0</td><td class="num">.722 → .712 (−1.0)</td></tr>
+<tr><td>minimal</td><td>AdaEvolve²</td><td>sol</td><td class="num">.758 → .778</td><td class="num">+2.0</td><td class="num">.722 → .682 (<span class="neg">−4.0</span>)</td></tr>
+<tr><td>minimal</td><td>AdaEvolve²</td><td>opus5</td><td class="num">.753 → .753</td><td class="num">+0.0</td><td class="num">.722 → .722 (+0.0)</td></tr>
+<tr><td>minimal</td><td>AdaEvolve² · s1</td><td>sol</td><td class="num">.758 → .758</td><td class="num">+0.0</td><td class="num">.722 → .697 (−2.5)</td></tr>
+<tr><td>medium</td><td>GEPA</td><td>sol</td><td class="num">.722 → .763</td><td class="num"><span class="pos">+4.0</span></td><td class="num">.727 → .697 (−3.0)</td></tr>
+<tr><td>medium</td><td>GEPA</td><td>opus5</td><td class="num">.717 → .778</td><td class="num"><span class="pos">+6.1</span></td><td class="num">.727 → .727 (+0.0)</td></tr>
+<tr><td>medium</td><td>GEPA · s1</td><td>sol</td><td class="num">.712 → .737</td><td class="num">+2.5</td><td class="num">.727 → .732 (+0.5)</td></tr>
+<tr><td>medium</td><td>GEPA · s1</td><td>opus5</td><td class="num">.727 → .753</td><td class="num">+2.5</td><td class="num">.727 → .687 (<span class="neg">−4.0</span>)</td></tr>
+<tr><td>medium</td><td>Meta-Harness</td><td>sol</td><td class="num">.717 → .763</td><td class="num"><span class="pos">+4.5</span></td><td class="num">.727 → .727 (+0.0)</td></tr>
+<tr><td>medium</td><td>Meta-Harness</td><td>opus5</td><td class="num">.712 → .788</td><td class="num"><span class="pos">+7.6</span></td><td class="num">.727 → .727 (+0.0)</td></tr>
+<tr><td>medium</td><td>Meta-Harness · s1</td><td>opus5</td><td class="num">.727 → .742</td><td class="num">+1.5</td><td class="num">.727 → .732 (+0.5)</td></tr>
+<tr><td>strong</td><td>GEPA</td><td>sol</td><td class="num">.763 → .778</td><td class="num">+1.5</td><td class="num">.727 → .682 (<span class="neg">−4.5</span>)</td></tr>
+<tr><td>strong</td><td>GEPA</td><td>opus5</td><td class="num">.753 → .798</td><td class="num"><span class="pos">+4.5</span></td><td class="num">.727 → .768 (<span class="pos">+4.0</span>)</td></tr>
+<tr class="gmean"><td colspan="3">CharXiv mean · dev→test corr 0.23</td><td></td><td class="num">+3.4</td><td class="num">Δtest −1.1</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tfoot">Every scored cell in the grid, luna worker. Dev values are run-stamped (a τ² seed's dev stamp varies by up to 6 pts between runs — the same noise the optimizers selected on); test values are posthoc sealed-test rescores. Deltas beyond ±4 pts (≈1σ) in color. ¹ opus5 τ² served via the responses route; genesis is the matched-route rescore. ² AdaEvolve's baseline is its own stamped iteration-1 program, not the shared tier genesis. Runs that never improved or died before scoring are catalogued separately.</p>
+
+  <div class="col">
+    <h3>Why dev gains evaporate</h3>
+    <p>The gap is arithmetic. One dev eval carries SE ≈ 3.5–5 pts; methods keep the <em>max</em> over 15–234 reads, and the expected max of that many noisy draws sits +3 to +6 pts above truth — exactly the dev gains reported on GPQA and CharXiv. The sealed test regresses the phantom away. The pooled dev→test correlation (0.46) is benchmark composition: within any one benchmark it nearly vanishes. A large dev gain was <em>necessary</em> for transfer, and nowhere near sufficient.</p>
+    <p>A smarter optimizer didn't close the gap. Opus-5 searched forensically at 6–14× sol's meta spend and posted higher dev peaks — and its sealed-test deltas match sol's. Better proposals cannot beat a noisy selector.</p>
+
+    <h3>Where gains were real</h3>
+    <p>The exceptions are systematic. Transfer required three things in series: <strong>reachable headroom</strong> (the seed fails for scaffold reasons, not worker-capability ones), <strong>a diagnosable cause</strong>, and <strong>a mechanism-shaped fix</strong> that acts on any instance. τ²-strong — the weakest seed in the grid, carrying a genuinely defective instruction — is the one setting that cleared all three: +6.1 to +8.5 test, in both meta arms.</p>
+    <p>Everywhere else, dev pressure converted search into split-fitting, because at this noise level a memorized +4 and a repaired +4 are the same number. What separates them is only visible in the artifacts: structure and abstraction transferred; enumeration and memorization died. The sharpest case is a pair of τ² runs from the same method and workflow — one compiled failures into domain invariants (+8.5), the other transcribed them into rollout-keyed micro-patches (−7.3). Dev scored the two winners 0.006 apart.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="wide">
+  <div class="col">
+    <span class="eyebrow">Method cards</span>
+    <h2>Reading each method on its own terms</h2>
+    <p>Same protocol, same budgets. Headline numbers are sol-arm means; per-benchmark Δtest pools both arms.</p>
+  </div>
+
+  <div class="card">
+    <h3>GEPA <span class="ident">context surface · reflective prompt mutation · instance-Pareto on dev</span></h3>
+    <p class="verdict">A dev-hungry grinder: strongest where the seed hides a repairable defect, degenerate where it doesn't.</p>
+    <div class="statrow">
+      <div class="stat"><div class="k">Mean Δtest</div><div class="v">−0.8 <small>pts · 10 cells</small></div></div>
+      <div class="stat"><div class="k">Mean Δdev</div><div class="v">+3.4</div></div>
+      <div class="stat"><div class="k">Search scale</div><div class="v">66–524 <small>candidates · 26–234 dev evals</small></div></div>
+      <div class="stat"><div class="k">Winner found</div><div class="v">md 72% <small>of budget · spread 8–96%</small></div></div>
+    </div>
+    <div class="bench">
+      <div><div class="k"><i style="background:var(--gpqa)"></i>GPQA</div><div class="v">−0.9</div></div>
+      <div><div class="k"><i style="background:var(--tau2)"></i>τ²</div><div class="v">+2.1</div></div>
+      <div><div class="k"><i style="background:var(--charxiv)"></i>CharXiv</div><div class="v">−0.7</div></div>
+    </div>
+    <div class="cline"><span class="tag up">Best case</span><span class="body">τ²-strong: five compounding reflections deleted a harmful plan-then-act seed instruction — <b>+6.1 test, identical under both workers.</b>
+      <details class="ex"><summary>The repair, step by step</summary><div class="exbody">
+        <span class="exq">Seed defect: "form an explicit, numbered step-by-step plan… execute the plan one step at a time" — the agent stalled awaiting permission between steps.</span>
+        <span class="exq">Reflection chain: "A plan is not a reason to pause" → "not a request for permission" → "tool momentum" → "Do not issue a new plan for each continuation of the same workflow."</span>
+        <span class="exnote">Edit #1 dropped dev 10 pts (.636 → .533) before four rebuilds climbed to .655 — tolerated only because acceptance is minibatch-local. The same permissiveness is what lets junk in.</span>
+      </div></details></span></div>
+    <div class="cline"><span class="tag down">Failure mode</span><span class="body">Prompt accretion into memorization: the GPQA winner grew 27 → 1,656 words of verbatim solved train instances (<b>−4.0 test</b>). Onset at candidate #1–2, invisible to dev — but flagged early by acceptance rate (memorizers accept ≥90% of proposals vs. 25–50% healthy) and by train n-grams in the prompt.
+      <details class="ex"><summary>Inside the cheat-sheet</summary><div class="exbody">
+        <span class="exq">"KNOWN SCIENTIFIC ANCHORS: … 2⁴ = 16 stereoisomers …"</span>
+        <span class="exq">"pH ≈ 4.26 at 25% titration"</span>
+        <span class="exq">"the intended major sequential endo adduct is dimethyl (1R,4S,…)-…dicarboxylate"</span>
+        <span class="exq">CharXiv variant, same disease: "the correct count is 15; counts of 14 or 16 indicate that one row was missed" (dev +1.5, test −4.5)</span>
+        <span class="exnote">Each anchor traces to a specific train file; train/dev/test are disjoint, so the anchors are dead weight. In this run 202 of 210 accepted candidates scored below the seed on full dev — the "winner" was the argmax over 36 near-ties.</span>
+      </div></details></span></div>
+    <div class="cline"><span class="tag mid">Signature</span><span class="body">Best-dev moves in only 1–5 discrete jumps per ~70 h run; most of the budget buys plateau. No crashes — its failures are silent.</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Meta-Harness <span class="ident">program surface · coding-agent proposer · best-by-dev</span></h3>
+    <p class="verdict">The sample-efficiency frontier: architectural edits from real trace forensics — whose value hinges on abstraction, not diagnosis.</p>
+    <div class="statrow">
+      <div class="stat"><div class="k">Mean Δtest</div><div class="v">+0.9 <small>pts · 8 cells</small></div></div>
+      <div class="stat"><div class="k">Mean Δdev</div><div class="v">+4.2</div></div>
+      <div class="stat"><div class="k">Search scale</div><div class="v">21–88 <small>candidates · 5–10× fewer than GEPA</small></div></div>
+      <div class="stat"><div class="k">Winner found</div><div class="v">md 53% <small>of budget, then plateau</small></div></div>
+    </div>
+    <div class="bench">
+      <div><div class="k"><i style="background:var(--gpqa)"></i>GPQA</div><div class="v">+0.9</div></div>
+      <div><div class="k"><i style="background:var(--tau2)"></i>τ²</div><div class="v">+1.1</div></div>
+      <div><div class="k"><i style="background:var(--charxiv)"></i>CharXiv</div><div class="v">−1.1</div></div>
+    </div>
+    <div class="cline"><span class="tag up">Best case</span><span class="body">Rebuilt a 1-call GPQA solver into a blind 3-call ensemble + adjudicator, prompt kept tiny (<b>+4.0</b> on the cell where GEPA memorized and lost 4); compiled τ² failures into domain invariants (<b>+8.5</b>).
+      <details class="ex"><summary>What abstraction looks like</summary><div class="exbody">
+        <span class="exq">Adjudicator charter: "Neither candidate is authoritative and agreement is not evidence."</span>
+        <span class="exq">Train knowledge distilled into heuristics <i>without answers</i>: "Do not assume an electric dipole when symmetry can cancel it."</span>
+        <span class="exq">τ² invariants that bind on any instance: "A rejected upgrade never cancels an authorized baggage change." · "Transaction recovery is part of completion — use fresh tool evidence, select the user's already-stated fallback."</span>
+      </div></details></span></div>
+    <div class="cline"><span class="tag down">Failure mode</span><span class="body">Causes <i>transcribed</i> instead of abstracted — scenario-keyed micro-patches (<b>−7.3</b>). And robustness is meta-model-dependent: sol's proposer crashed 7/18 sessions on one cell and killed all three of its CharXiv runs; opus, zero crashes at 6× the meta cost.
+      <details class="ex"><summary>What transcription looks like — and the crash</summary><div class="exbody">
+        <span class="exq">Proposal rationale keyed to named rollouts: "retail:104 failed on several cross-order item actions" · "airline:20 quoted a $351 upgrade but the mutation charged $1,200."</span>
+        <span class="exq">Anti-generalizing latitude: "a direct request is authorization unless policy explicitly requires a later confirmation."</span>
+        <span class="exq">Sol's fatal move, preserved in the crash snapshot: for f in candidates/*/run.py; do echo "### $f"; sed -n 1,260p "$f"; done → codex session failed rc=1</span>
+        <span class="exnote">Dev scored the invariant winner .6909 and the micro-patch winner .6848 — inside one SE. The selector cannot tell abstraction from transcription; only the sealed test (and the worker swap) can.</span>
+      </div></details></span></div>
+    <div class="cline"><span class="tag mid">Signature</span><span class="body">~80% of opus proposals cite specific rollout evidence — and grounded proposals score <b>no better</b> on dev than ungrounded ones. Diagnosis is not the bottleneck; selection is.</span></div>
+  </div>
+
+  <div class="card">
+    <h3>AdaEvolve <span class="ident">program surface · evolutionary search · train-only fitness</span></h3>
+    <p class="verdict">A champion hill-climb on a scalar noisier than its steps: mostly noise-gated random search — and the source of the grid's single largest real transfer.</p>
+    <div class="statrow">
+      <div class="stat"><div class="k">Mean Δtest</div><div class="v">+0.4 <small>pts · 4 cells</small></div></div>
+      <div class="stat"><div class="k">Mean Δdev</div><div class="v">+5.7</div></div>
+      <div class="stat"><div class="k">Search scale</div><div class="v">87–307 <small>candidates · dev never gates</small></div></div>
+      <div class="stat"><div class="k">Accepted steps</div><div class="v">±1 task <small>vs. eval SE of 1.7–3.5 tasks</small></div></div>
+    </div>
+    <div class="bench">
+      <div><div class="k"><i style="background:var(--gpqa)"></i>GPQA</div><div class="v">+0.6</div></div>
+      <div><div class="k"><i style="background:var(--tau2)"></i>τ²</div><div class="v">+4.8</div></div>
+      <div><div class="k"><i style="background:var(--charxiv)"></i>CharXiv</div><div class="v">−2.2</div></div>
+    </div>
+    <div class="cline"><span class="tag up">Best case</span><span class="body">The τ² rewrite deleted prompt prose for runtime structure — a policy-clause extractor + sanitized task capsule that refuses answer fields. <b>+6.1 test under luna, +13.3 under the haiku swap</b>: structure helps a weaker worker more.
+      <details class="ex"><summary>The winning program, in four accepts</summary><div class="exbody">
+        <span class="exq">A regex-built "HIGH-RISK CLAUSE INDEX" over whatever domain_policy is passed at runtime, plus a task capsule whose _FORBIDDEN_FIELDS blocklist explicitly refuses oracle fields: expected_actions, reward, initial_state.</span>
+        <span class="exq">Lineage: capsule introduced at iter 74 (.648, accept) → clause-index variant at 79 → "policy sandwich" at 80 (.667, accept) → refined winner at 88 (train .722, dev .739). Code similarity between accepts 0.19 → 0.09: real re-architecture, not tweaks.</span>
+        <span class="exnote">Zero instance-specific strings anywhere. The idea family came from the proposer's prior: sol proposed task-object introspection in 35/74 τ² proposals; opus, 3/65 on the same seed — and stalled.</span>
+      </div></details></span></div>
+    <div class="cline"><span class="tag down">Failure mode</span><span class="body">Noise-peak capture: the GPQA "improvement" was a <b>byte-identical re-eval</b> of the iteration-1 program (same code scored .892–.954 across five evals) that then blocked 290 straight iterations. Train-only fitness just relocates the curse: a purely structural CharXiv winner still lost 4.0.
+      <details class="ex"><summary>Life against a lucky champion</summary><div class="exbody">
+        <span class="exq">Five evals of identical bytes: .892 · .908 · .923 · .923 · .954 — the last draw became the acceptance bar.</span>
+        <span class="exq">Iters 33–37, all rejected: "apply exact confirmed TRAIN corrections" → .892 · rename + restructure → .892 · "proof-carrying JSON validation" → .862 · tweak → .877 · expression checker → .892. Five ambitious rewrites, all scoring at the program's true mean, all losing to the champion's lucky .954.</span>
+        <span class="exq">The CharXiv relocation: six-crop grid + skeptical-audit pass, zero memorized content, train .794 → nominal .853 — end-of-run re-evals said .809, and the sealed test took 4.0 back.</span>
+      </div></details></span></div>
+    <div class="cline"><span class="tag mid">Signature</span><span class="body">The proposer sees scalars only — 0/353 prompts contained per-task results or errors — so direction comes from its <i>prior</i>, propagated by selection. Highest run-level variance in the grid: 2 of 6 runs accepted nothing at all.</span></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="wide">
+  <div class="col">
+    <span class="eyebrow">Does it travel?</span>
+    <h2>The worker swap as a lie detector</h2>
+    <p>Every frozen winner was re-scored with the worker swapped from luna to haiku-4.5 — an independent draw of both worker and items, at evaluation-only cost. Of the eight winners with Δ ≥ +2 under luna: five survived, two inverted, one attenuated. Edit type predicts the split perfectly; gain size doesn't.</p>
+  </div>
+  <figure>
+    <p class="ftitle">The eight luna-frame winners, re-scored under haiku-4.5</p>
+    <div class="legend" id="legend3"></div>
+    <div id="fig3"></div>
+    <figcaption>FIG — test Δ under the optimized-for worker (open) → under the swap (filled); shared-genesis pairing (the catalog's own-baseline convention puts the AdaEvolve cell at +6.1 → +13.3). Survivors are all structural fixes to weak seeds; both inversions are worker-calibrated or memorized prompt content.</figcaption>
+  </figure>
+</section>
+
+<section class="col">
+  <hr style="margin: 44px auto;">
+  <p class="footer-note">Provenance: the MABench findings catalog (2026-08-13) — three posthoc scoring batches independent of run logging, event traces, GEPA lineage state, proposer session traces, AdaEvolve checkpoints. SE per eval ≈ 3.5–5 pts; single-cell deltas under ~4 pts are within 1σ; τ² comparisons route-matched where marked (the serving route alone moves the same agent +8–13 pts).</p>
+</section>
+
+<div class="tooltip" id="tip" role="status"></div>
+
+<script>
+(function () {
+  var css = getComputedStyle(document.documentElement);
+  function C(name) { return css.getPropertyValue(name).trim(); }
+  var tip = document.getElementById('tip');
+  function showTip(html, x, y) {
+    tip.innerHTML = html;
+    tip.style.opacity = 1;
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = x + pad, top = y + pad;
+    if (left + w > window.innerWidth - 8) left = x - w - pad;
+    if (top + h > window.innerHeight - 8) top = y - h - pad;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+  function hideTip() { tip.style.opacity = 0; }
+
+  var TASK = {
+    gpqa: { label: 'GPQA', v: '--gpqa' },
+    tau2: { label: 'τ²-bench', v: '--tau2' },
+    charxiv: { label: 'CharXiv', v: '--charxiv' }
+  };
+  var MLABEL = { gepa: 'GEPA', mh: 'Meta-Harness', adaevolve: 'AdaEvolve' };
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  var pts = [{"arm":"sol","task":"gpqa","tier":"medium","method":"gepa","ddev":1.5,"dtest":-3.3},{"arm":"sol","task":"gpqa","tier":"medium","method":"mh","ddev":6.5,"dtest":-0.3},{"arm":"sol","task":"gpqa","tier":"minimal","method":"adaevolve","ddev":5.0,"dtest":0.3},{"arm":"sol","task":"gpqa","tier":"minimal","method":"gepa","ddev":2.5,"dtest":-2.2},{"arm":"sol","task":"gpqa","tier":"minimal","method":"mh","ddev":5.5,"dtest":3.9},{"arm":"sol","task":"tau2","tier":"medium","method":"gepa","ddev":4.8,"dtest":-0.6},{"arm":"sol","task":"tau2","tier":"medium","method":"mh","ddev":13.3,"dtest":-6.7},{"arm":"sol","task":"tau2","tier":"minimal","method":"adaevolve","ddev":16.4,"dtest":4.8},{"arm":"sol","task":"tau2","tier":"minimal","method":"gepa","ddev":8.5,"dtest":1.8},{"arm":"sol","task":"tau2","tier":"minimal","method":"mh","ddev":13.9,"dtest":-0.6},{"arm":"sol","task":"tau2","tier":"strong","method":"gepa","ddev":1.8,"dtest":5.5},{"arm":"sol","task":"tau2","tier":"strong","method":"mh","ddev":20.6,"dtest":9.1},{"arm":"sol","task":"charxiv","tier":"medium","method":"gepa","ddev":4.0,"dtest":-3.0},{"arm":"sol","task":"charxiv","tier":"medium","method":"gepa","seed":"s1","ddev":2.5,"dtest":0.5},{"arm":"sol","task":"charxiv","tier":"medium","method":"mh","ddev":4.5,"dtest":0.0},{"arm":"sol","task":"charxiv","tier":"minimal","method":"adaevolve","ddev":2.0,"dtest":-4.0},{"arm":"sol","task":"charxiv","tier":"minimal","method":"adaevolve","seed":"s1","ddev":0.0,"dtest":-2.5},{"arm":"sol","task":"charxiv","tier":"minimal","method":"gepa","ddev":3.0,"dtest":0.5},{"arm":"sol","task":"charxiv","tier":"minimal","method":"mh","ddev":2.5,"dtest":-2.5},{"arm":"sol","task":"charxiv","tier":"strong","method":"gepa","ddev":1.5,"dtest":-4.5},{"arm":"sol","task":"gpqa","tier":"strong","method":"gepa","ddev":0.5,"dtest":0.5},{"arm":"sol","task":"gpqa","tier":"strong","method":"mh","ddev":3.5,"dtest":3.5},{"arm":"opus5","task":"charxiv","tier":"medium","method":"gepa","ddev":6.1,"dtest":0.0},{"arm":"opus5","task":"charxiv","tier":"medium","method":"gepa","seed":"s1","ddev":2.5,"dtest":-4.0},{"arm":"opus5","task":"charxiv","tier":"medium","method":"mh","ddev":7.6,"dtest":0.0},{"arm":"opus5","task":"charxiv","tier":"medium","method":"mh","seed":"s1","ddev":1.5,"dtest":0.5},{"arm":"opus5","task":"charxiv","tier":"minimal","method":"adaevolve","ddev":0.0,"dtest":0.0},{"arm":"opus5","task":"charxiv","tier":"minimal","method":"gepa","ddev":5.6,"dtest":1.0},{"arm":"opus5","task":"charxiv","tier":"minimal","method":"mh","ddev":7.1,"dtest":-3.5},{"arm":"opus5","task":"charxiv","tier":"minimal","method":"mh","seed":"s1","ddev":2.0,"dtest":-1.0},{"arm":"opus5","task":"charxiv","tier":"strong","method":"gepa","ddev":4.5,"dtest":4.0},{"arm":"opus5","task":"gpqa","tier":"medium","method":"gepa","ddev":5.0,"dtest":-1.8},{"arm":"opus5","task":"gpqa","tier":"medium","method":"mh","ddev":7.5,"dtest":-1.3},{"arm":"opus5","task":"gpqa","tier":"minimal","method":"adaevolve","ddev":6.5,"dtest":0.8},{"arm":"opus5","task":"gpqa","tier":"minimal","method":"gepa","ddev":4.5,"dtest":-0.2},{"arm":"opus5","task":"gpqa","tier":"minimal","method":"mh","ddev":6.5,"dtest":-0.7},{"arm":"opus5","task":"gpqa","tier":"strong","method":"gepa","ddev":4.0,"dtest":1.5},{"arm":"opus5","task":"gpqa","tier":"strong","method":"mh","ddev":3.5,"dtest":0.0},{"arm":"opus5","task":"tau2","tier":"minimal","method":"gepa","ddev":7.3,"dtest":-1.2},{"arm":"opus5","task":"tau2","tier":"minimal","method":"mh","ddev":10.3,"dtest":1.2},{"arm":"opus5","task":"tau2","tier":"strong","method":"gepa","ddev":11.5,"dtest":4.8},{"arm":"opus5","task":"tau2","tier":"strong","method":"mh","ddev":15.2,"dtest":2.4}];
+
+  function fig1() {
+    var W = 840, H = 420, m = { t: 16, r: 20, b: 44, l: 52 };
+    var x0 = -2, x1 = 22, y0 = -9, y1 = 11;
+    function X(v) { return m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r); }
+    function Y(v) { return m.t + (y1 - v) / (y1 - y0) * (H - m.t - m.b); }
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Scatter of dev gain versus sealed-test gain for 42 cells, colored by benchmark' });
+    document.getElementById('fig1').appendChild(svg);
+
+    el('rect', { x: m.l, y: Y(4), width: W - m.l - m.r, height: Y(-4) - Y(4), fill: C('--band') }, svg);
+    for (var gy = -8; gy <= 10; gy += 4) {
+      el('line', { x1: m.l, x2: W - m.r, y1: Y(gy), y2: Y(gy), stroke: C('--hair'), 'stroke-width': 1 }, svg);
+      el('text', { x: m.l - 8, y: Y(gy) + 3.5, 'text-anchor': 'end', 'font-size': 11, fill: C('--muted') }, svg).textContent = (gy > 0 ? '+' : '') + gy;
+    }
+    for (var gx = 0; gx <= 20; gx += 5) {
+      el('text', { x: X(gx), y: H - m.b + 20, 'text-anchor': 'middle', 'font-size': 11, fill: C('--muted') }, svg).textContent = (gx > 0 ? '+' : '') + gx;
+    }
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: C('--baseline'), 'stroke-width': 1.25 }, svg);
+    el('line', { x1: X(0), x2: X(10.8), y1: Y(0), y2: Y(10.8), stroke: C('--muted'), 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
+    el('text', { x: X(9.0), y: Y(9.9), 'font-size': 10.5, fill: C('--muted') }, svg).textContent = 'full transfer';
+    el('text', { x: W - m.r, y: Y(-3.35), 'text-anchor': 'end', 'font-size': 10.5, fill: C('--muted') }, svg).textContent = '±1σ noise band';
+    el('text', { x: (m.l + W - m.r) / 2, y: H - 6, 'text-anchor': 'middle', 'font-size': 11.5, fill: C('--ink-2') }, svg).textContent = 'dev gain (pts) →';
+    var ylab = el('text', { x: 14, y: (m.t + H - m.b) / 2, 'font-size': 11.5, fill: C('--ink-2'), transform: 'rotate(-90 14 ' + (m.t + H - m.b) / 2 + ')', 'text-anchor': 'middle' }, svg);
+    ylab.textContent = 'sealed-test gain (pts) →';
+
+    pts.forEach(function (p) {
+      var g = el('g', { cursor: 'default' }, svg);
+      el('circle', { cx: X(p.ddev), cy: Y(p.dtest), r: 5.5, fill: C(TASK[p.task].v), stroke: C('--surface'), 'stroke-width': 1.5 }, g);
+      el('circle', { cx: X(p.ddev), cy: Y(p.dtest), r: 12, fill: 'transparent' }, g);
+      g.addEventListener('mousemove', function (ev) {
+        showTip('<b>' + TASK[p.task].label + ' · ' + p.tier + ' · ' + MLABEL[p.method] + '</b><br>meta: ' + p.arm + (p.seed ? ' · ' + p.seed : '') + '<br>dev ' + (p.ddev >= 0 ? '+' : '') + p.ddev.toFixed(1) + ' → test ' + (p.dtest >= 0 ? '+' : '') + p.dtest.toFixed(1), ev.clientX, ev.clientY);
+      });
+      g.addEventListener('mouseleave', hideTip);
+    });
+
+    [
+      { x: 20.6, y: 9.1, t: 'τ²-strong · MH · real repair', dx: -8, dy: -12, anchor: 'end' },
+      { x: 2.0, y: -4.0, t: 'CharXiv · AdaEvolve: structural, still overfit', dx: 10, dy: 4, anchor: 'start' },
+      { x: 13.3, y: -6.7, t: 'τ²-medium · MH micro-patches', dx: 10, dy: 4, anchor: 'start' }
+    ].forEach(function (a) {
+      el('text', { x: X(a.x) + a.dx, y: Y(a.y) + a.dy, 'font-size': 10.5, fill: C('--ink-2'), 'text-anchor': a.anchor }, svg).textContent = a.t;
+    });
+
+    document.getElementById('legend1').innerHTML =
+      '<span class="chip"><span class="dotc" style="background:var(--gpqa)"></span>GPQA-Diamond</span>' +
+      '<span class="chip"><span class="dotc" style="background:var(--tau2)"></span>τ²-bench</span>' +
+      '<span class="chip"><span class="dotc" style="background:var(--charxiv)"></span>CharXiv</span>';
+  }
+
+  var swap = [
+    { cell: 'τ² strong · MH · sol', luna: 9.1, haiku: 4.8, out: 'survived' },
+    { cell: 'τ² strong · GEPA · sol', luna: 5.5, haiku: 6.1, out: 'survived' },
+    { cell: 'τ² minimal · AdaEvolve · sol', luna: 4.8, haiku: 7.9, out: 'survived' },
+    { cell: 'τ² strong · GEPA · opus5', luna: 4.8, haiku: 6.7, out: 'survived' },
+    { cell: 'CharXiv strong · GEPA · opus5', luna: 4.0, haiku: -2.5, out: 'inverted' },
+    { cell: 'GPQA minimal · MH · sol', luna: 3.9, haiku: 0.8, out: 'attenuated' },
+    { cell: 'GPQA strong · MH · sol', luna: 3.5, haiku: -3.5, out: 'inverted' },
+    { cell: 'τ² strong · MH · opus5', luna: 2.4, haiku: 7.9, out: 'survived' }
+  ];
+
+  function fig3() {
+    var W = 840, rowH = 42, m = { t: 22, r: 30, b: 40, l: 246 };
+    var H = m.t + rowH * swap.length + m.b;
+    var x0 = -6, x1 = 11;
+    function X(v) { return m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r); }
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Dumbbell chart: each winner’s test delta under luna versus haiku workers' });
+    document.getElementById('fig3').appendChild(svg);
+
+    for (var gx = -5; gx <= 10; gx += 5) {
+      el('line', { x1: X(gx), x2: X(gx), y1: m.t - 6, y2: H - m.b, stroke: gx === 0 ? C('--baseline') : C('--hair'), 'stroke-width': gx === 0 ? 1.5 : 1 }, svg);
+      el('text', { x: X(gx), y: H - m.b + 18, 'text-anchor': 'middle', 'font-size': 11, fill: C('--muted') }, svg).textContent = (gx > 0 ? '+' : '') + gx;
+    }
+    el('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', 'font-size': 11.5, fill: C('--ink-2') }, svg).textContent = 'test delta vs genesis (pts) →';
+
+    var OUT = { survived: C('--good'), inverted: C('--bad'), attenuated: C('--muted') };
+    swap.forEach(function (s, i) {
+      var y = m.t + rowH * i + rowH / 2;
+      el('text', { x: m.l - 14, y: y + 4, 'text-anchor': 'end', 'font-size': 11.5, fill: C('--ink') }, svg).textContent = s.cell;
+      var col = OUT[s.out];
+      el('line', { x1: X(s.luna), x2: X(s.haiku), y1: y, y2: y, stroke: col, 'stroke-width': 2.5, 'stroke-linecap': 'round' }, svg);
+      var g = el('g', {}, svg);
+      el('circle', { cx: X(s.luna), cy: y, r: 5.5, fill: C('--surface'), stroke: col, 'stroke-width': 2 }, g);
+      el('circle', { cx: X(s.haiku), cy: y, r: 5.5, fill: col, stroke: C('--surface'), 'stroke-width': 1.5 }, g);
+      el('rect', { x: Math.min(X(s.luna), X(s.haiku)) - 12, y: y - 14, width: Math.abs(X(s.luna) - X(s.haiku)) + 24, height: 28, fill: 'transparent' }, g);
+      g.addEventListener('mousemove', function (ev) {
+        showTip('<b>' + s.cell + '</b><br>luna ' + (s.luna >= 0 ? '+' : '') + s.luna.toFixed(1) + ' → haiku ' + (s.haiku >= 0 ? '+' : '') + s.haiku.toFixed(1) + '<br>' + s.out, ev.clientX, ev.clientY);
+      });
+      g.addEventListener('mouseleave', hideTip);
+      el('text', { x: X(Math.max(s.luna, s.haiku)) + 12, y: y + 4, 'font-size': 10.5, fill: C('--ink-2') }, svg).textContent = s.out;
+    });
+
+    document.getElementById('legend3').innerHTML =
+      '<span class="chip"><span class="dotc" style="background:transparent;border:2px solid var(--muted);width:8px;height:8px;"></span>luna (optimized-for)</span>' +
+      '<span class="chip"><span class="dotc" style="background:var(--muted)"></span>haiku-4.5 (swap)</span>' +
+      '<span class="chip" style="color:var(--good)">— survived</span>' +
+      '<span class="chip" style="color:var(--bad)">— inverted</span>';
+  }
+
+  fig1();
+  fig3();
+})();
+</script>
