@@ -240,10 +240,37 @@ Here is what happened when we pointed it at real methods.
 ## Methods against the floor: the frontier grid
 
 The overfitting section pooled every run together; this section splits
-them by method. The collaborator batches give the cleanest read we have —
-**37 scored cells** on the frontier worker, spanning three carriers ×
-three seed tiers × two meta-models, with GEPA and Meta-Harness in every
-combination and AdaEvolve on the minimal seeds:
+them by method — and by the optimizer's brain. The collaborator batches
+give the cleanest read we have: **37 scored cells** on the frontier
+worker, spanning three carriers × three seed tiers × two meta-models,
+with GEPA and Meta-Harness in every combination and AdaEvolve on the
+minimal seeds. @fig-anytime-meta shows all of them at once, as each run
+experienced itself:
+
+![Every run's own story of progress, one panel per meta-model. Each line
+is a run's best-so-far **dev** lift over its seed as search time
+accumulates (a step = the method found a new best); the open circle at
+the line's end is the **sealed** lift of that run's best checkpointed
+candidate. The dev curves climb to the edge of the snapshot under both
+metas — and the sealed circles collapse into the noise band. The shaded
+band is ±2σ for the 66-item carriers; τ²'s own floor is wider (~±7pp),
+CharXiv's tighter. Curves are measured against the seed's dev score,
+circles against its sealed score; runs that checkpointed nothing beyond
+their seed have a curve but no
+circle.](figures/anytime_meta.png){#fig-anytime-meta width=100%}
+
+Three things to read off the figure before any table. The curves **never
+stop climbing** — there is no plateau where the method decides it is
+done; more search buys more belief, right up to where the snapshot cuts
+off. The circles don't follow: most land inside the band, several below zero.
+The steepest climbs split both ways — sol's two τ² Meta-Harness runs
+claim +14 and +21pp on dev, and one keeps **+8.5pp** (a real lift, on
+the grid's weakest seed) while the other gives back everything and more
+(**−7.3pp**); nothing in the dev curve tells you which is which. And the
+two panels are near
+interchangeable: swap the optimizer's brain from Claude Opus 5 to
+GPT-5.6-sol and the same shape reappears — the climb is a property of
+searching, not of the searcher. The per-method summary:
 
 | Method | cells | mean Δ dev | mean Δ sealed | survives |
 |---|---:|---:|---:|---:|
