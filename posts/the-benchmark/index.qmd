@@ -237,57 +237,60 @@ checkpointed curve, the ledger, the full trace — and a floor measurement that 
 how big a lift has to be before it means anything. That is the protocol.
 Here is what happened when we pointed it at real methods.
 
-## First results: methods against the floor
+## Methods against the floor: the frontier grid
 
-The first slice of the grid is done: four optimizers plus the null floor,
-run across the CharXiv, GPQA, and Terminal-Bench-2 cells of @tbl-suite —
-worker `haiku-4.5`, meta-agent `opus-4.8`, a $150 ledger cap per run. The
-core result is one number per method: mean Δ over the *measured* floor,
-averaged settings-first so GPQA's three repeats don't outvote single-run
-cells.
+The overfitting section pooled every run together; this section splits
+them by method. The collaborator batches give the cleanest read we have —
+**37 scored cells** on the frontier worker, spanning three carriers ×
+three seed tiers × two meta-models, with GEPA and Meta-Harness in every
+combination and AdaEvolve on the minimal seeds:
 
-::: {#fig-first-slice layout-ncol=2}
+| Method | cells | mean Δ dev | mean Δ sealed | survives |
+|---|---:|---:|---:|---:|
+| GEPA | 17 | +7.9pp | **+0.3pp** | 4% |
+| Meta-Harness | 16 | +9.5pp | **+1.9pp** | 20% |
+| AdaEvolve | 4 | +9.6pp | **+3.4pp** | 35% |
 
-![The method axis: mean lift per method.](figures/method_delta.png){#fig-method-delta}
+: The method axis of the frontier grid: what each method claimed on dev,
+what the seal kept, and the fraction of the claim that survived.
+AdaEvolve's four cells are all minimal-tier seeds — the easiest headroom
+in the grid — so its row is not comparable to the other
+two. {#tbl-method-axis}
 
-![The model axis: one measured point, the rest reserved.](figures/model_axis.png){#fig-model-axis}
+Two things are worth taking from the table. First, the **dev column is
+flat**: every method tells the same +8-to-+10-point story about itself.
+That is the overfitting result restated per method — the dev claim
+measures selection pressure on the dev split, and selection pressure is
+roughly method-independent. Second, **no sealed mean clears the noise**.
+The ordering (Meta-Harness over GEPA) does survive swapping the
+meta-model — GEPA moves +1.3 → −0.6pp from the opus-5 meta to sol,
+Meta-Harness +2.7 → +1.2pp — but a ~1.6pp separation is far inside a
+floor whose per-cell 2σ runs 4–7pp on GPQA and τ². Of the 37 cells,
+three clear their own carrier's bar, and all three are Meta-Harness:
+**+10.3pp and +8.5pp on the same weak τ² seed under the two different
+metas**, and +4.5pp on a CharXiv cell against that carrier's tighter
+floor (2σ ≈ 2–3.4pp). Two further τ² cells post +6.1pp and die inside
+that carrier's wider noise. Where the surviving lifts sit — on the
+weakest seeds — is the next section's subject.
 
-Two axes of the grid after $150 of search per cell. **Left**, the method
-axis: mean Δ over the measured floor — AdaEvolve **+0.043** · GEPA
-**+0.018** · Meta-Harness **+0.017** · AFlow **−0.008**, identical, to
-the third decimal, to what the untouched seed scored on its own re-run.
-**Right**, the meta-model axis: every run in this slice used `opus-4.8`
-as the meta-agent, so the axis has exactly one measured value (the pooled
-Δ across all floored cells); the other tiers are filled in by the
-worker-axis section below.
-:::
-
-Read this against the section above. AdaEvolve leads at +0.043, and its
-best cell — +0.053 on GPQA — is the one lift in the slice that approaches
-the two-sigma bar; its average also covers only the two cells it finished
-(it crashed early on a third, which we excluded rather than score its
-untouched seed as a method result). GEPA (+0.018) and Meta-Harness
-(+0.017) sit clear of zero but inside the noise band: real-looking, not
-yet claimable. AFlow's one finished cell lands at −0.008 — exactly what
-the null floor scored on its own re-run. So the honest one-line summary
-of the first slice: **one method produces a lift big enough to take
-seriously, two produce lifts the noise could have produced, and one
-produces nothing the seed didn't already have.**
-
-Two caveats, stated rather than buried. The grid is unbalanced — some
-cells are still running, some crashed, and both TB2 cells lack a measured
-floor, so they contribute nothing to the
-Δ average. And every number above is one $150 run (three on GPQA), so
-this section will be re-cut as reps accumulate. What it already shows is
-the shape of the field at this budget: gains exist, they are small, and
-without the floor they would be indistinguishable from luck.
+The reading limits, stated rather than buried. Everything here is the
+posthoc basis described in the overfitting section: best *checkpointed*
+candidate, three sealed reps, not the method's final selection. Four
+cells checkpointed nothing beyond their genesis and contribute only
+floors; a fifth (CharXiv-strong × Meta-Harness under opus-5) died at
+provisioning. AdaEvolve appears only on minimal seeds, and every cell is
+a single seed. So this section supports one claim, not a leaderboard:
+**on a frontier worker, optimizer choice moves the sealed result by less
+than the eval's own noise — and every lift that does beat the noise
+lives where the seed was weak.**
 
 ## The worker axis: headroom is the method's whole paycheck
 
-The floor and first-results sections ran one worker, `haiku-4.5`; the
-overfitting section ran the frontier. Hold the protocol fixed and move
-the worker — one slice down from haiku, one up — and the slices line up
-into the sharpest and least comfortable finding of this evaluation.
+Neither of the last two sections found anything on the frontier worker
+that beats the noise — except on its weakest seeds. This section makes
+that pattern the object of study: hold the protocol fixed and move the
+worker, and the null resolves into the sharpest and least comfortable
+finding of this evaluation.
 
 **Down first.** On GPQA with `GPT-OSS-120B` as the worker (seed floor
 ≈ 0.65–0.70) and `opus-5` proposing, the instrument finally shows what
@@ -299,10 +302,9 @@ seed and reproduces across all three. So the protocol is not incapable of
 detecting differences between methods; it detects them fine, *when they
 exist*.
 
-**Now up.** The frontier slice is the collaborator batches from the
-overfitting section — **`gpt-5.6-luna`** as the worker, one batch under
-the `claude-opus-5` meta, one under `gpt-5.6-sol` — across GPQA,
-τ²-bench, and CharXiv, roughly forty cells. On GPQA, where luna's untouched seeds already score
+**Now back up at the frontier**, re-cutting the grid of the last two
+sections by headroom instead of by method. On GPQA, where luna's
+untouched seeds already score
 **0.83–0.90**, the mean sealed lift is **+0.9pp** under the opus-5 meta
 and **−0.6pp** under sol — null under both, while the *dev* side was
 reporting selected candidates as high as 0.92. On CharXiv (seed floors
@@ -316,6 +318,12 @@ same method that wins the OSS-120B slice, replicated across optimizer
 brains. Everywhere the frontier worker is already competent, nothing
 survives the seal; where it is weak, the same harvesting works on it that
 works on a weak model.
+
+**And the middle worker** completes the gradient. `haiku-4.5`, from an
+earlier internal sweep under an `opus-4.8` meta, contributes 21 cells:
+mean sealed lift **+2.4pp**, and every one of its five cells that clears
+the noise band sits on its own weakest seeds — minimal-tier floors of
+0.54–0.58.
 
 ![The whole evaluation in one frame: sealed lift over the seed against
 the seed's own floor, one point per cell, three workers. The shaded band
@@ -391,7 +399,7 @@ ledger, the sealed scores). The numbers land as the cells finish.
 A single Δ per method compresses away the thing MABench actually records:
 *how* the lift was produced. So each method gets a post-mortem built from
 the same three artifacts — the candidate DAG (what it proposed, in what
-order, descended from what), the ledger (where its $150 went: proposal
+order, descended from what), the ledger (where its budget went: proposal
 tokens vs. evaluation rollouts), and the anytime curve (when in the
 budget the lift arrived). The strength/weakness read is the
 cross-tabulation. A method that spends most of its budget evaluating one
@@ -401,8 +409,9 @@ are methods doing a competent search over the wrong surface.
 
 Per method, the mechanism-specific question each trace should answer:
 
-- **AdaEvolve** — it edits the agent's source, and it currently leads the
-  slice. The question is *what kind* of edit is paying: control-flow
+- **AdaEvolve** — it edits the agent's source, and it posts the largest
+  per-method mean in both the haiku sweep and the frontier grid, each
+  time on the fewest cells. The question is *what kind* of edit is paying: control-flow
   changes, or prompt strings that happen to live in code? Diff every
   accepted candidate against its parent and classify the hunks. If the
   gains are mostly embedded-prompt edits, AdaEvolve is a prompt optimizer
@@ -414,8 +423,9 @@ Per method, the mechanism-specific question each trace should answer:
   the last) or oscillate (later generations undo earlier ones)?
 - **Meta-Harness** — it rewrites the harness around a fixed agent. The
   check: which harness surfaces it actually touches across cells, and
-  whether its +0.017 comes from one repeated trick or from
-  carrier-specific adaptation.
+  whether its lifts come from one repeated trick or from
+  carrier-specific adaptation — the τ² pair says the trick travels
+  across metas; the open question is whether it travels across seeds.
 - **AFlow** — MCTS over operator graphs. The check: how much of the
   operator vocabulary the search visits at this budget, and how deep the
   tree gets before the ledger runs out — a search designed for more
@@ -473,8 +483,8 @@ A benchmark that reports only finished runs launders its denominator. So:
 classify every *launched* run — finished-and-lifted, finished-flat,
 crashed, budget-exhausted — and for each non-lift, read the meta-trace
 backwards to the proximate cause. The taxonomy we expect, from the runs
-so far: hard method crashes (AdaEvolve's CharXiv-medium run died $1.40
-in, disclosed above); budget exhaustion mid-search with the best
+so far: hard method crashes (an AdaEvolve CharXiv run in the haiku sweep
+died $1.40 in; a frontier Meta-Harness cell died at provisioning); budget exhaustion mid-search with the best
 candidate still unevaluated; degenerate proposals the method could not
 back out of (candidates scoring below seed, then selected anyway);
 and harness-fighting — malformed artifacts, contract violations, retry
