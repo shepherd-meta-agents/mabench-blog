@@ -54,9 +54,9 @@ themselves. Every published family lands in one cell.
 
 | coupling ↓ · surface → | **context** — prompts · skills · memories | **program** — code · control flow · graphs |
 |---|---|---|
-| **agnostic** — improves any seed agent | prompt optimization: **GEPA** · TRIPLE · CAPO | coding-agent search: **Meta-Harness** · CRO · **AdaEvolve** |
-| **exogenous** — a separate designer, its own representation | *open cell — no published method* | automated agent design: ADAS · GPTSwarm · AFlow · MaAS |
-| **endogenous** — the agent rewrites itself | self-evolving skills & memory: Hermes | self-evolving agents: DGM · HGM · SICA · STOP · Gödel-Agent |
+| **agnostic** — improves any seed agent | **GEPA** [@gepa] · TRIPLE [@triple] · CAPO [@capo] | **Meta-Harness** [@mh] · CRO · **AdaEvolve** [@adaevolve] |
+| **exogenous** — a separate designer, its own representation | *open cell — no published method* | ADAS [@adas] · GPTSwarm [@gptswarm] · AFlow [@aflow] · MaAS [@maas] |
+| **endogenous** — the agent rewrites itself | Hermes | DGM [@dgm] · HGM [@hgm] · SICA [@sica] · STOP [@stop] · Gödel-Agent [@godelagent] |
 
 : The taxonomy of meta-optimization methods. The three we evaluate here are in **bold**. {#tbl-taxonomy}
 
