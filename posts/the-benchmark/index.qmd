@@ -41,33 +41,7 @@ release makes all of this moot, the argument cuts the other way: the
 optimizer is a model too, so every release upgrades the thing that improves
 the agent, not just the agent.
 
-It is not hard to see where this goes. If program-space search keeps
-compounding with model capability, harness design stops being artisanal:
-you don't hand-write a scaffold any more than you hand-tune weights — you pick
-an optimizer, point it at your agent, and pay for the lift. Agent optimization
-becomes a component you choose the way you choose Adam over SGD. For that
-future to arrive, one question has to have a measurable answer: *which of these
-methods actually works, on what, and at what cost?*
-
-Right now it doesn't. Every optimizer paper grades its own homework: its own
-tasks, its own seed agents, its own budget, its own base model — and, when
-baselines appear at all, its own reimplementation of the competition. The
-numbers never meet. A field that cannot compare its methods cannot tell whether
-it is making progress.
-
-So we built the comparison and ran it. Before describing the instrument,
-here is the one result we most want you to take away. When a machine
-optimizes an agent, it grades its own progress on data it can see — and on
-that data, improvement is nearly guaranteed. Score the very same result on a
-sealed split the optimizer never touched, and most of that improvement is
-gone; on some carriers, whether the final agent even beats the one it started
-from is a coin flip. Almost everything the optimizer believes it gained is
-selection pressure on a small, noisy sample — not a gain that survives a
-fresh draw of items. That gap, between the lift a method reports and the lift
-that exists, is what this post is organized around, and the reason its title
-says *evaluation*, not *benchmark*.
-
-MABench is our attempt at the measuring stick. The fixed point of every
+MABench is our attempt at a measuring stick. The fixed point of every
 run is a **seed agent paired with a dataset**; the thing under test is an
 **optimization method running on a model** — vendored verbatim, never
 reimplemented — handed a copy of the seed, a metered budget, and nothing
@@ -111,9 +85,11 @@ reuse in personal agents — and having now run our own instrument across
 some eighty cells, four workers, and three meta-models, our most confident
 conclusion is about the measurement itself: at today's effect sizes and
 noise levels, no protocol we know of — ours included — can stably rank
-optimization methods, let alone the models running them. The dev–test gap
-we led with is one reason. The other two: the lifts that survive
-the seal are typically smaller than the eval's own run-to-run noise, and
+optimization methods, let alone the models running them. One reason is a
+dev–test gap — what a method reports on data it can tune against mostly
+evaporates on a sealed split it never saw. The other two: the lifts that
+survive the seal are typically smaller than the eval's own run-to-run noise,
+and
 the gains that do clear the noise appear and disappear with worker
 headroom. A leaderboard built on numbers like these would be ranking
 luck.
