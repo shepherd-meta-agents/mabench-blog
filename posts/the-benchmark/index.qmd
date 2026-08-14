@@ -134,9 +134,10 @@ dev-side story: the dev claims are the runs' own records, and the gap between
 what a method believes and what survives the seal is what every caveat leaves
 intact.
 
-## Method differences shrink as the worker gets stronger
+## The core result: methods on the frontier worker
 
-Zoom in on that frontier worker and separate its runs by method and by the
+This is the comparison the grid was built for: fix the frontier worker, and
+separate its runs by method and by the
 optimizer's model (@fig-anytime-meta). Three things stand out before any
 table. The dev
 curves never stop climbing — there is no point where a method decides it is
@@ -163,8 +164,8 @@ mean clears the noise. Meta-Harness edges GEPA under both models — the one
 rank the grid repeats — but the gap is far inside a floor whose per-cell 2σ is
 several points wide. Only a handful of individual cells beat their carrier's
 bar at all; every one of them is Meta-Harness, and every one sits on a
-low-floor seed. This is the headroom pattern from the section above, now seen method by
-method.
+low-floor seed. This is the previous section's pattern — lifts live where the
+starting point is weak — now seen method by method.
 
 | | Claude Opus 5 meta | | GPT-5.6-sol meta | |
 |---|---:|---:|---:|---:|
