@@ -1,6 +1,6 @@
 ---
 title: "Machines Improving Agents: An Evaluation, Not (Yet) a Benchmark"
-subtitle: "What we learned running agent optimizers under MABench's sealed protocol — and what a real benchmark of this field would take."
+subtitle: "Evaluating the machines that optimize an agent's harness — across model × harness pairs, not the model alone — under a sealed protocol, and what a real benchmark of this field would take."
 date: "2026-08-05"
 date-modified: "2026-08-13"
 author:
@@ -12,12 +12,13 @@ aliases:
   - /posts/01-setup-and-protocol/
 ---
 
-There are two ways to make an agent better: improve the model, or improve the
-*program* wrapped around it — its prompts, workflow, tools, and scaffold. The
-first is closed territory, where a single point of lift costs a training run
-and only a few labs can pay. The second is open, cheap, iterable in an
-afternoon — and the same model's score can swing sharply depending on the
-harness it runs in.
+An agent's capability is not a property of its model alone. It is the model
+*times* the harness wrapped around it — the prompts, workflow, tools, and
+scaffold — and with the model held fixed, the score still swings sharply as
+that harness changes. The two factors are priced worlds apart: a point of
+lift from the model costs a training run only a few labs can pay, while the
+harness is open to anyone, cheap, and iterable in an afternoon. So the thing
+worth measuring is not a model but a *model × harness* pair.
 
 ![The two axes. Progress so far has climbed the parameter wall — a training
 run per step, flattening returns. The program-space direction is open, cheap,
