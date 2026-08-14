@@ -56,14 +56,15 @@ themselves. Every published family lands in one cell.
 |---|---|---|
 | **agnostic** — improves any seed agent | **GEPA** [@gepa] · TRIPLE [@triple] · CAPO [@capo] | **Meta-Harness** [@mh] · CRO · **AdaEvolve** [@adaevolve] |
 | **exogenous** — a separate designer, its own representation | *open cell — no published method* | ADAS [@adas] · GPTSwarm [@gptswarm] · AFlow [@aflow] · MaAS [@maas] |
-| **endogenous** — the agent rewrites itself | Hermes | DGM [@dgm] · HGM [@hgm] · SICA [@sica] · STOP [@stop] · Gödel-Agent [@godelagent] |
+| **endogenous** — the agent rewrites itself | Hermes [@hermes] | DGM [@dgm] · HGM [@hgm] · SICA [@sica] · STOP [@stop] · Gödel-Agent [@godelagent] |
 
-: The taxonomy of meta-optimization methods. The three we evaluate here are in **bold**. {#tbl-taxonomy}
+: The taxonomy of meta-optimization methods. The three we focus on in this post are in **bold**. {#tbl-taxonomy}
 
-**We evaluate three of these methods** — **GEPA** (agnostic prompt
-optimization), plus **Meta-Harness** and **AdaEvolve** (agnostic coding-agent
-search) — each of which takes an arbitrary seed agent and returns an improved
-version of it. We run them across four benchmarks — **GPQA-Diamond**
+**We focus here on the results of the three most representative methods** —
+**GEPA** (agnostic prompt optimization), plus **Meta-Harness** and
+**AdaEvolve** (agnostic coding-agent search), each taking an arbitrary seed
+agent and returning an improved version of it; the evaluation itself covers
+the wider roster. We run these three across four benchmarks — **GPQA-Diamond**
 (graduate-science multiple choice), **τ²-bench** (tool-use dialogue),
 **CharXiv** (chart question-answering), and **Terminal-Bench-2** (terminal and
 coding tasks) — each shipping a base seed agent plus harder scaffolded
