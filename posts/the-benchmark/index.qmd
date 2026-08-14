@@ -12,16 +12,12 @@ aliases:
   - /posts/01-setup-and-protocol/
 ---
 
-There are roughly two ways to make an agent better. You can improve the model —
-pretraining, RL, post-training of every flavor — or you can improve the
-*program* wrapped around it: the prompts, the workflow, the tools, the
-scaffold. Call them parameter space and program space. Parameter space is where
-the headline gains come from, but it is closed territory: a point of lift costs
-a training run, and a handful of labs can pay. Program space is the opposite —
-open to anyone, priced in tens of dollars, iterable in an afternoon — and the
-same model routinely swings by double digits depending on the harness it runs
-inside.<!-- TODO: pin a real number here — SWE-bench leaderboard spread for a
-fixed model across scaffolds is the obvious citation -->
+There are two ways to make an agent better: improve the model, or improve the
+*program* wrapped around it — its prompts, workflow, tools, and scaffold. The
+first is closed territory, where a single point of lift costs a training run
+and only a few labs can pay. The second is open, cheap, iterable in an
+afternoon — and the same model's score can swing sharply depending on the
+harness it runs in.
 
 ![The two axes. Progress so far has climbed the parameter wall — a training
 run per step, flattening returns. The program-space direction is open, cheap,
@@ -29,77 +25,25 @@ and — as of roughly now — searchable by machine. The gate is model capabilit
 run the same harness search from a weaker model (gray) and there is little to
 gain.](figures/two_axes.png){#fig-two-axes width=88%}
 
-For a long time, program space was searched by hand — which is to say
-barely: harness design is a high-dimensional, gradient-free search problem,
-and people explore it by folklore. The alternative is to let a capable model
-do the searching: read an agent's trajectory, diagnose the failure, propose
-an edit. That idea has been drawing steadily more attention — prompt evolvers
-like GEPA [@gepa], workflow searchers like AFlow [@aflow], and a
-recursive-self-improvement line (ADAS, the Darwin Gödel Machine) in which the
-agent rewrites its own scaffold. And if your instinct is that the next model
-release makes all of this moot, the argument cuts the other way: the
+For a long time, program space was searched by hand. Increasingly it is
+searched by machine: a capable model reads an agent's trajectory, diagnoses a
+failure, and rewrites the scaffold — the idea behind a fast-growing line of
+work (GEPA [@gepa], AFlow [@aflow], ADAS, the Darwin Gödel Machine). And the
 optimizer is a model too, so every release upgrades the thing that improves
 the agent, not just the agent.
 
-MABench is our attempt at a measuring stick. The fixed point of every
-run is a **seed agent paired with a dataset**; the thing under test is an
-**optimization method running on a model** — vendored verbatim, never
-reimplemented — handed a copy of the seed, a metered budget, and nothing
-else. The method may do anything to the agent: rewrite its prompt,
-restructure its workflow, edit its source. The one rule that matters for
-reading the results: the method **checkpoints** whatever it believes is
-its best, and only those checkpoints get scored — later, on a **sealed**
-test split the method never sees. It never grades itself. A run's result
-is how far the sealed score moved over the seed's, and what that cost.
-
-| Carrier | The task | Base | Medium | Advanced |
-|---|---|---|---|---|
-| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
-| **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
-| **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
-| **Terminal-Bench-2** | terminal / coding tasks in containers | minimal command loop | plan · reflect · explore | Terminus |
-
-: The grid. Each carrier ships one base seed and literature-pattern
-variants arranged by scaffold complexity; each variant exposes a different
-edit surface, so a method's lift has to generalize across agent shapes
-rather than fit one. The seed floors are not flat — on GPQA alone the five
-seeds span 0.58 to 0.69 — which is why every result is Δ over *its own*
-seed, never over a pooled baseline. {#tbl-suite}
-
-And the one taxonomy fact needed to read the results: methods differ on
-the **surface** they edit — *context* (prompts, skills, memories) or
-*program* (source, control flow, the workflow graph) — and on their
-**coupling** to the agent. *Agnostic* methods (GEPA, Meta-Harness,
-AdaEvolve) improve any seed you hand them; *exogenous* designers (ADAS,
-AFlow) grow their own artifact from their own genesis; *endogenous*
-methods (DGM, SICA) **are** the agent, rewriting itself. Coupling
-determines what a fair comparison even is — an agnostic method can be
-swept across seeds, an agent-native one can only be scored against the
-same seed floor on its own carrier — and the protocol is built around
-that distinction.
-
-But this post is not a benchmark release, and we want to be precise about
-why. Benchmarks are starting to appear in this space — Evo-Bench
-[@evobench] for harness evolution, PAST-Bench [@pastbench] for experience
-reuse in personal agents — and having now run our own instrument across
-some eighty cells, four workers, and three meta-models, our most confident
-conclusion is about the measurement itself: at today's effect sizes and
-noise levels, no protocol we know of — ours included — can stably rank
-optimization methods, let alone the models running them. One reason is a
-dev–test gap — what a method reports on data it can tune against mostly
-evaporates on a sealed split it never saw. The other two: the lifts that
-survive the seal are typically smaller than the eval's own run-to-run noise,
-and
-the gains that do clear the noise appear and disappear with worker
-headroom. A leaderboard built on numbers like these would be ranking
-luck.
-
-So we are publishing this as what it turned out to be: an **evaluation and
-analysis**. The rest of the post is the evidence — what survived the
-sealed split and what evaporated there, the noise floor every claim has
-to clear, why the strongest worker is the hardest to improve — and, closing,
-what a benchmark of this kind would need before its rankings mean
-anything.
+We built a fair, sealed comparison of these optimizers and ran it across four
+benchmarks and several worker models. Each optimizer gets a copy of a seed
+agent and a metered budget and may change it however it likes; it flags its
+best candidates as it goes, and only those are scored — later, by us, on a
+**sealed** test split the method never sees. Nothing grades its own homework.
+The most confident thing we can report is about the measurement, not a winner:
+**most of what an optimizer counts as improvement does not survive that sealed
+test.** The gains that clear the eval's own noise are small, and they appear
+only where the underlying model was weak to begin with. So we are publishing
+this as an *evaluation*, not a benchmark — at today's effect sizes and noise,
+no protocol we know of (ours included) can rank these methods reliably. What
+follows is the evidence.
 
 ## Optimizers improve the score they can see — and almost nothing else
 
@@ -407,6 +351,24 @@ current methods harvest headroom rather than create capability.** When a
 benchmark in this space can meet the six requirements above, its rankings
 will mean something. We intend MABench's next release to be judged
 against exactly that list.
+
+## The benchmark suite
+
+The evaluation spans four benchmarks. Each ships one base seed agent plus
+literature-pattern variants of increasing scaffold complexity, so a method's
+lift has to generalize across agent shapes rather than fit one. Every result
+is a lift over the agent's *own* seed score, never over a pooled baseline.
+
+| Carrier | The task | Base | Medium | Advanced |
+|---|---|---|---|---|
+| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
+| **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
+| **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
+| **Terminal-Bench-2** | terminal / coding tasks in containers | minimal command loop | plan · reflect · explore | Terminus |
+
+: The four carriers and their seed agents. Seed floors are not flat — on GPQA
+alone the five seeds span 0.58 to 0.69 — which is why every lift is measured
+against the seed's own score. {#tbl-suite}
 
 <!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
