@@ -47,18 +47,16 @@ no protocol we know of (ours included) can rank these methods reliably.
 
 These methods vary along two axes: the **surface** they edit — an agent's
 *context* (prompts, skills, memories) or its *program* (code, control flow,
-the workflow graph) — and their **coupling** to the agent, where *agnostic*
-methods improve any seed you hand them, *exogenous* ones design their own
-artifact from scratch, and *endogenous* ones *are* the agent, rewriting
-themselves. Every published family lands in one cell.
-
-| coupling ↓ · surface → | **context** — prompts · skills · memories | **program** — code · control flow · graphs |
-|---|---|---|
-| **agnostic** — improves any seed agent | **GEPA** [@gepa] · TRIPLE [@triple] · CAPO [@capo] | **Meta-Harness** [@mh] · CRO · **AdaEvolve** [@adaevolve] |
-| **exogenous** — a separate designer, its own representation | *open cell — no published method* | ADAS [@adas] · GPTSwarm [@gptswarm] · AFlow [@aflow] · MaAS [@maas] |
-| **endogenous** — the agent rewrites itself | Hermes [@hermes] | DGM [@dgm] · HGM [@hgm] · SICA [@sica] · STOP [@stop] · Gödel-Agent [@godelagent] |
-
-: The taxonomy of meta-optimization methods. The three we focus on in this post are in **bold**. {#tbl-taxonomy}
+the workflow graph) — and their **coupling** to the agent. *Agnostic* methods
+improve any seed agent you hand them: on the context surface, **GEPA**
+[@gepa], TRIPLE [@triple], and CAPO [@capo]; on the program surface,
+**Meta-Harness** [@mh], CRO, and **AdaEvolve** [@adaevolve]. *Exogenous*
+methods design their own artifact from scratch — ADAS [@adas], GPTSwarm
+[@gptswarm], AFlow [@aflow], and MaAS [@maas], all on the program side; no
+published method occupies the exogenous-context cell. And *endogenous*
+methods *are* the agent, rewriting themselves: Hermes [@hermes] on context;
+DGM [@dgm], HGM [@hgm], SICA [@sica], STOP [@stop], and Gödel-Agent
+[@godelagent] on program. Every published family lands in one of these cells.
 
 **We focus here on the results of the three most representative methods** —
 **GEPA** (agnostic prompt optimization), plus **Meta-Harness** and
@@ -155,29 +153,17 @@ noise band (shaded, ±2σ of re-scoring an unchanged agent). Runs that
 checkpointed nothing beyond their seed appear only as
 curves.](figures/anytime_meta.png){#fig-anytime-meta width=100%}
 
-Collapsed to one number per method, the pattern is @tbl-method-axis. Two
-things carry. The dev columns are flat: every method, under either optimizer
-model, tells the same optimistic story about itself — which is the overfitting
-result restated per method, since the dev claim mostly measures selection
-pressure, and selection pressure is roughly method-independent. And no sealed
-mean clears the noise. Meta-Harness edges GEPA under both models — the one
-rank the grid repeats — but the gap is far inside a floor whose per-cell 2σ is
-several points wide. Only a handful of individual cells beat their carrier's
-bar at all; every one of them is Meta-Harness, and every one sits on a
-low-floor seed. This is the previous section's pattern — lifts live where the
-starting point is weak — now seen method by method.
-
-| | Claude Opus 5 meta | | GPT-5.6-sol meta | |
-|---|---:|---:|---:|---:|
-| **Method** | Δ dev | Δ sealed | Δ dev | Δ sealed |
-| GEPA | +8.4pp | **+1.3pp** | +7.4pp | **−0.6pp** |
-| Meta-Harness | +10.2pp | **+2.7pp** | +8.9pp | **+1.2pp** |
-| AdaEvolve | +5.7pp | **+2.5pp** | +10.9pp | **+3.7pp** |
-
-: The method axis of the frontier grid (37 cells across 3 carriers × 3 seed
-tiers × 2 optimizer models): what each method claimed on dev, and what the
-seal kept. AdaEvolve's cells are all minimal-tier seeds — the easiest headroom
-in the grid — so its row is not comparable to the other two. {#tbl-method-axis}
+Collapse each method to one number and two things carry. The dev claims are
+flat: every method, under either optimizer model, tells the same optimistic
+story about itself — which is the overfitting result restated per method,
+since the dev claim mostly measures selection pressure, and selection
+pressure is roughly method-independent. And no sealed mean clears the noise.
+Meta-Harness edges GEPA under both optimizer models — the one rank the grid
+repeats — but the gap is far inside a floor whose per-cell 2σ is several
+points wide. Only a handful of individual cells beat their carrier's bar at
+all; every one of them is Meta-Harness, and every one sits on a low-floor
+seed. This is the previous section's pattern — lifts live where the starting
+point is weak — now seen method by method.
 
 The reading limits, kept honest: every sealed number here is the best
 *checkpointed* candidate re-scored on the sealed split, not the method's final
