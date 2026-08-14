@@ -43,19 +43,150 @@ The most confident thing we can report is about the measurement, not a winner:
 test.** The gains that clear the eval's own noise are small, and they appear
 only where the underlying model was weak to begin with. So we are publishing
 this as an *evaluation*, not a benchmark — at today's effect sizes and noise,
-no protocol we know of (ours included) can rank these methods reliably. What
-follows is the evidence.
+no protocol we know of (ours included) can rank these methods reliably.
 
-## Optimizers improve the score they can see — and almost nothing else
+We evaluate three of these methods — **GEPA**, which evolves an agent's
+prompts; **Meta-Harness**, which rewrites the code of the scaffold around a
+fixed agent; and **AdaEvolve**, which evolves the agent's program itself: one
+prompt-surface method and two program-surface ones, each taking an arbitrary
+seed agent and returning an improved version of it. We run them across four
+benchmarks — **GPQA-Diamond** (graduate-science multiple choice), **τ²-bench**
+(tool-use dialogue), **CharXiv** (chart question-answering), and
+**Terminal-Bench-2** (terminal and coding tasks) — each shipping a base seed
+agent plus harder scaffolded variants, so a method's lift has to generalize
+across agent shapes rather than fit one. What follows is the evidence.
 
-Give an optimizer a split it can read, and it almost always reports a win.
-Score the very same result on a sealed split it never saw, and most of that
-win is gone — on two of our three carriers, whether the final agent even
-beats the one it started from is a coin flip (@fig-devtest-bars). The
-optimizer is not cheating; it is selecting. Dev is a small, noisy sample, and
-picking the best-looking candidate on a noisy sample buys a number that does
-not survive a fresh draw of items. Everything below is the frontier-worker
-slice — worker `gpt-5.6-luna`, two optimizer models proposing.
+## Headroom shapes what optimization can recover
+
+One thing predicts whether optimization banks a real gain better than the
+choice of method does: how much room the starting agent had to improve — its
+*headroom*. Our main sweep runs on a strong frontier worker; cut its results
+by headroom rather than by method (@tbl-headroom). Where that worker already
+scores high — GPQA, CharXiv, most tasks — nothing survives the seal
+under either optimizer model, however much dev climbs. The exception is τ², the
+one carrier where the frontier worker still starts weak: there, on its
+lowest-floor seed, Meta-Harness posts the only two frontier lifts that reach
+the bar — one under each optimizer model. Lift tracks the floor, not the
+method.
+
+| carrier (frontier `gpt-5.6-luna` worker) | seed floor | what the seal keeps |
+|---|---|---|
+| GPQA | 0.83–0.90 | ~0, both models |
+| CharXiv | 0.69–0.73 | ~0 |
+| τ² (weakest seed) | 0.43 | **+8.5pp / +10.3pp** (the two models) |
+
+: The frontier grid re-cut by headroom. The only surviving lifts sit on the
+one carrier where the frontier worker is still weak. {#tbl-headroom}
+
+A middle-strength worker completes the gradient, and @fig-worker-axis is the
+whole finding in one picture: as the worker strengthens, what the seal keeps
+falls monotonically, until at the frontier even the *claim* sits inside the
+noise. The same monotonicity holds within a single worker — luna's τ² seeds
+fall from a real lift to nothing as their floors rise. Headroom, not model or
+method, is the variable that decides whether optimization banks anything.
+
+![The worker axis on GPQA, reduced to the two numbers that matter: per worker
+(weakest to frontier), what the methods claimed on dev (light) and what the
+sealed test kept (dark), averaged over every valid cell, under an
+Opus-5-class optimizer model (the middle worker's sweep used Opus 4.8,
+indistinguishable in our tests). The shaded band is ±2σ of re-scoring an
+unchanged agent; dev bars are measured against the seed's sealed score, so
+read them as directional. What the seal keeps falls as the worker
+strengthens.](figures/worker_axis.png){#fig-worker-axis width=92%}
+
+Three details make the pattern more than an artifact. It is model-independent: swapping the
+optimizer's model changes nothing about where lift is possible, and the one
+real frontier lift was found by both. The noise floor replicates across
+workers, so the frontier null is not an artifact of one cheap model. And the
+pattern is monotone in headroom, both across workers and within a single one.
+
+Put the slices together and the field's headline numbers line up rather than
+conflict. Evo-Bench [@evobench] reports its largest gains exactly where the
+base harness is weak and the model underexploited — the same corner our
+weak-worker slices light up. There is no contradiction: **program-space search
+mostly recovers headroom the model already had, rather than adding capability
+it lacked.** A corollary runs the introduction's "optimizer-is-a-model-too"
+argument the other way: every model release upgrades the thing doing the
+improving, but also *shrinks the thing being harvested*. On the tasks where
+the frontier worker is already strong — most tasks, increasingly — there is
+little left for these methods to collect.
+
+The caveats, in full, because this is the post's strongest claim. The frontier
+batches are mid-flight snapshots, not sealed runs: every number is our own
+posthoc re-scoring of the seed and the best *checkpointed* candidate, not the
+method's final pick. A provider-side API change partway through the sweep
+means the posthoc worker ran under slightly different decoding than the
+original searches — seed and candidate were re-scored under identical
+conditions, so each lift is a fair comparison, but the runs' own in-run
+records are not comparable to ours. And each frontier cell is a single seed,
+so the τ² hit is two runs, not a distribution. None of this touches the
+dev-side story: the dev claims are the runs' own records, and the gap between
+what a method believes and what survives the seal is what every caveat leaves
+intact.
+
+## Method differences shrink as the worker gets stronger
+
+Zoom in on that frontier worker and separate its runs by method and by the
+optimizer's model (@fig-anytime-meta). Three things stand out before any
+table. The dev
+curves never stop climbing — there is no point where a method decides it is
+done; more search just buys more belief. The sealed outcomes in the right
+margin do not follow: most land inside their carrier's noise band, several
+below zero. And the two optimizer models trace the same shape per carrier —
+the climb is a property of searching, not of the searcher.
+
+![Every run's own story of progress, and where it landed. Rows: the two
+optimizer models. First three columns: the carriers. Thin lines are single
+runs' best-so-far dev lift over the seed against worker rollouts consumed;
+bold lines are the smoothed per-method mean. The right column scatters the
+same runs' sealed lifts around the zero-lift baseline, inside each carrier's
+noise band (shaded, ±2σ of re-scoring an unchanged agent). Runs that
+checkpointed nothing beyond their seed appear only as
+curves.](figures/anytime_meta.png){#fig-anytime-meta width=100%}
+
+Collapsed to one number per method, the pattern is @tbl-method-axis. Two
+things carry. The dev columns are flat: every method, under either optimizer
+model, tells the same optimistic story about itself — which is the overfitting
+result restated per method, since the dev claim mostly measures selection
+pressure, and selection pressure is roughly method-independent. And no sealed
+mean clears the noise. Meta-Harness edges GEPA under both models — the one
+rank the grid repeats — but the gap is far inside a floor whose per-cell 2σ is
+several points wide. Only a handful of individual cells beat their carrier's
+bar at all; every one of them is Meta-Harness, and every one sits on a
+low-floor seed. This is the headroom pattern from the section above, now seen method by
+method.
+
+| | Claude Opus 5 meta | | GPT-5.6-sol meta | |
+|---|---:|---:|---:|---:|
+| **Method** | Δ dev | Δ sealed | Δ dev | Δ sealed |
+| GEPA | +8.4pp | **+1.3pp** | +7.4pp | **−0.6pp** |
+| Meta-Harness | +10.2pp | **+2.7pp** | +8.9pp | **+1.2pp** |
+| AdaEvolve | +5.7pp | **+2.5pp** | +10.9pp | **+3.7pp** |
+
+: The method axis of the frontier grid (37 cells across 3 carriers × 3 seed
+tiers × 2 optimizer models): what each method claimed on dev, and what the
+seal kept. AdaEvolve's cells are all minimal-tier seeds — the easiest headroom
+in the grid — so its row is not comparable to the other two. {#tbl-method-axis}
+
+The reading limits, kept honest: every sealed number here is the best
+*checkpointed* candidate re-scored on the sealed split, not the method's final
+selection; a few cells checkpointed nothing beyond their seed and contribute
+only a floor; one died at provisioning; and AdaEvolve appears only on minimal
+seeds, one cell per model. So the section supports one claim, not a
+leaderboard: **on a frontier worker, optimizer choice moves the sealed result
+by less than the eval's own noise — and every lift that beats the noise lives
+where the seed was weak.**
+
+## How much of a dev gain survives the seal
+
+Why do the dev gains fade under the seal? Because the optimizer selects on a
+small, noisy sample. Give it a split it can read and it almost always reports
+a win; score the very same candidate on a sealed split it never saw, and most
+of that win is gone — on two of our three carriers, whether the final agent
+beats the one it started from is close to a coin flip (@fig-devtest-bars). The
+optimizer is not cheating; it is selecting, and picking the best-looking
+candidate on a noisy sample buys a number that does not survive a fresh draw
+of items.
 
 ![The lift that survives the seal. Left: mean lift over the seed on the split
 the optimizer could see (blue) vs. the sealed split (orange), per carrier;
@@ -82,36 +213,16 @@ selection noise, a mechanism decision analysis named the *optimizer's curse*
 two decades ago — in a companion post:
 [The Optimizer's Curse](../optimizers-curse/index.qmd).
 
-### The splits: the same measurement on different items
+## Calibrating lifts against the noise floor
 
-Train, dev, and test are near-equal, fixed thirds of each dataset, committed
-as id lists and stratified so every split carries the same domain mix (a flat
-shuffle had once left GPQA's test physics-heavy). What differs between them is
-not the items but the feedback the method is allowed to see:
-
-| split | GPQA items | τ² items | what the method gets from it |
-|---|---:|---:|---|
-| **train** | 65 | 54 | full feedback — per-item verdicts, transcripts, gold |
-| **dev** | 67 | 55 | a single score, as often as budget allows |
-| **test** (sealed) | 66 | 55 | nothing; scored later, by us, on items it never touches |
-
-: The three splits. Dev and test are the same measurement on different items.
-{#tbl-splits}
-
-Because dev and test are the same measurement on different items, a dev→test
-gap is not leakage and not distribution shift. It is selection pressure on a
-finite, noisy dev split — the thing the rest of this post keeps measuring.
-
-## A real lift has to clear six points
-
-Before trusting any lift, you have to know the noise. This field is noisier
-than most: the worker is stochastic, the optimizer is stochastic, and so is
+We have leaned on the word *noise* throughout — here it is, measured. This
+field is noisier than most: the worker is stochastic, the optimizer is stochastic, and so is
 *scoring itself* — re-score a frozen, unchanged agent on the same sealed
 split and a large share of items flip their verdict between repetitions. We
 measured that floor directly, by re-scoring untouched seed agents under
-identical conditions (@tbl-floor). The consequence is blunt: a single run's
-reported lift has to clear roughly six points before it can be told apart
-from luck, and many published optimization gains are smaller than that.
+identical conditions (@tbl-floor). The upshot: a single run's reported lift has to clear roughly six points
+before it can be told apart from luck, and some reported optimization gains
+fall below that.
 
 | measured on a frozen, unchanged agent | value |
 |---|---|
@@ -148,135 +259,11 @@ is the √N extrapolation.](figures/noise_floor.png){#fig-noise width=88%}
 When the budget runs out, the run is over, and what survives is everything the
 comparison needs and nothing the method can spin: the candidate graph, the
 checkpointed curve, the ledger, the full trace — and a floor that says how big
-a lift has to be before it means anything. Here is what happened when we
-pointed the protocol at real methods.
+a lift has to be before it means anything. That leaves the constructive
+question: what would it take to make these comparisons into a benchmark whose
+rankings hold?
 
-## On a frontier worker, which method you pick barely moves the result
-
-The last section pooled every run; this one splits them by method and by the
-optimizer's model. Read the grid as each run experienced itself
-(@fig-anytime-meta), and three things stand out before any table. The dev
-curves never stop climbing — there is no point where a method decides it is
-done; more search just buys more belief. The sealed outcomes in the right
-margin do not follow: most land inside their carrier's noise band, several
-below zero. And the two optimizer models trace the same shape per carrier —
-the climb is a property of searching, not of the searcher.
-
-![Every run's own story of progress, and where it landed. Rows: the two
-optimizer models. First three columns: the carriers. Thin lines are single
-runs' best-so-far dev lift over the seed against worker rollouts consumed;
-bold lines are the smoothed per-method mean. The right column scatters the
-same runs' sealed lifts around the zero-lift baseline, inside each carrier's
-noise band (shaded, ±2σ of re-scoring an unchanged agent). Runs that
-checkpointed nothing beyond their seed appear only as
-curves.](figures/anytime_meta.png){#fig-anytime-meta width=100%}
-
-Collapsed to one number per method, the pattern is @tbl-method-axis. Two
-things carry. The dev columns are flat: every method, under either optimizer
-model, tells the same optimistic story about itself — which is the overfitting
-result restated per method, since the dev claim mostly measures selection
-pressure, and selection pressure is roughly method-independent. And no sealed
-mean clears the noise. Meta-Harness edges GEPA under both models — the one
-rank the grid repeats — but the gap is far inside a floor whose per-cell 2σ is
-several points wide. Only a handful of individual cells beat their carrier's
-bar at all; every one of them is Meta-Harness, and every one sits on a
-low-floor seed. Where those surviving lifts live — on the weakest seeds — is
-the next section.
-
-| | Claude Opus 5 meta | | GPT-5.6-sol meta | |
-|---|---:|---:|---:|---:|
-| **Method** | Δ dev | Δ sealed | Δ dev | Δ sealed |
-| GEPA | +8.4pp | **+1.3pp** | +7.4pp | **−0.6pp** |
-| Meta-Harness | +10.2pp | **+2.7pp** | +8.9pp | **+1.2pp** |
-| AdaEvolve | +5.7pp | **+2.5pp** | +10.9pp | **+3.7pp** |
-
-: The method axis of the frontier grid (37 cells across 3 carriers × 3 seed
-tiers × 2 optimizer models): what each method claimed on dev, and what the
-seal kept. AdaEvolve's cells are all minimal-tier seeds — the easiest headroom
-in the grid — so its row is not comparable to the other two. {#tbl-method-axis}
-
-The reading limits, kept honest: every sealed number here is the best
-*checkpointed* candidate re-scored on the sealed split, not the method's final
-selection; a few cells checkpointed nothing beyond their seed and contribute
-only a floor; one died at provisioning; and AdaEvolve appears only on minimal
-seeds, one cell per model. So the section supports one claim, not a
-leaderboard: **on a frontier worker, optimizer choice moves the sealed result
-by less than the eval's own noise — and every lift that beats the noise lives
-where the seed was weak.**
-
-## Optimizers harvest headroom; they don't create capability
-
-The last two sections found nothing on the frontier worker that beats the
-noise — except on its weakest seeds. Make that the object of study: hold the
-protocol fixed and change the worker. The null resolves into the sharpest
-finding of this evaluation, and it is a claim about *where* lift is possible,
-not *which method* finds it.
-
-Take the frontier grid and re-cut it by *headroom* rather than by method
-(@tbl-headroom). Where the frontier worker
-already scores high — GPQA, CharXiv, most tasks — nothing survives the seal
-under either optimizer model, however much dev climbs. The exception is τ², the
-one carrier where the frontier worker still starts weak: there, on its
-lowest-floor seed, Meta-Harness posts the only two frontier lifts that reach
-the bar — one under each optimizer model. Lift tracks the floor, not the
-method.
-
-| carrier (frontier `gpt-5.6-luna` worker) | seed floor | what the seal keeps |
-|---|---|---|
-| GPQA | 0.83–0.90 | ~0, both models |
-| CharXiv | 0.69–0.73 | ~0 |
-| τ² (weakest seed) | 0.43 | **+8.5pp / +10.3pp** (the two models) |
-
-: The frontier grid re-cut by headroom. The only surviving lifts sit on the
-one carrier where the frontier worker is still weak. {#tbl-headroom}
-
-A middle-strength worker completes the gradient, and @fig-worker-axis is the
-whole finding in one picture: as the worker strengthens, what the seal keeps
-falls monotonically, until at the frontier even the *claim* sits inside the
-noise. The same monotonicity holds within a single worker — luna's τ² seeds
-fall from a real lift to nothing as their floors rise. Headroom, not model or
-method, is the variable that decides whether optimization banks anything.
-
-![The worker axis on GPQA, reduced to the two numbers that matter: per worker
-(weakest to frontier), what the methods claimed on dev (light) and what the
-sealed test kept (dark), averaged over every valid cell, under an
-Opus-5-class optimizer model (the middle worker's sweep used Opus 4.8,
-indistinguishable in our tests). The shaded band is ±2σ of re-scoring an
-unchanged agent; dev bars are measured against the seed's sealed score, so
-read them as directional. What the seal keeps falls as the worker
-strengthens.](figures/worker_axis.png){#fig-worker-axis width=92%}
-
-Three things make this hard to dismiss. It is model-independent: swapping the
-optimizer's model changes nothing about where lift is possible, and the one
-real frontier lift was found by both. The noise floor replicates across
-workers, so the frontier null is not an artifact of one cheap model. And the
-pattern is monotone in headroom, both across workers and within a single one.
-
-Put the slices together and the field's headline numbers line up rather than
-conflict. Evo-Bench [@evobench] reports its largest gains exactly where the
-base harness is weak and the model underexploited — the same corner our
-weak-worker slices light up. There is no contradiction: **program-space search
-harvests headroom; on current evidence it does not create capability.** The
-uncomfortable corollary runs the introduction's "optimizer-is-a-model-too"
-argument the other way: every model release upgrades the thing doing the
-improving, but also *shrinks the thing being harvested*. On the tasks where
-the frontier worker is already strong — most tasks, increasingly — there is
-little left for these methods to collect.
-
-The caveats, in full, because this is the post's spiciest claim. The frontier
-batches are mid-flight snapshots, not sealed runs: every number is our own
-posthoc re-scoring of the seed and the best *checkpointed* candidate, not the
-method's final pick. A provider-side API change partway through the sweep
-means the posthoc worker ran under slightly different decoding than the
-original searches — seed and candidate were re-scored under identical
-conditions, so each lift is a fair comparison, but the runs' own in-run
-records are not comparable to ours. And each frontier cell is a single seed,
-so the τ² hit is two runs, not a distribution. None of this touches the
-dev-side story: the dev claims are the runs' own records, and the gap between
-what a method believes and what survives the seal is what every caveat leaves
-intact.
-
-## What a reliable benchmark would take
+## Toward a reliable benchmark
 
 We said at the top that this is not a benchmark release. Here is the
 constructive version of that sentence. Every requirement below is
@@ -343,33 +330,15 @@ more than a few of them.
    has that fact laundered by a finished-runs-only table.
 
 None of this is exotic; it is the ordinary machinery of measurement,
-applied to a field that has been sprinting too fast to install it. Our
+applied to a fast-moving field that has not yet installed it. Our
 contribution, on reflection, is not a leaderboard — it is the instrument,
 the ~80-cell corpus of fully-traced runs, the floor measurements, and the
 two findings we believe survive every caveat in this post: **selection on
-a noisy dev split takes back most of what optimization claims, and
-current methods harvest headroom rather than create capability.** When a
+a noisy dev split takes back most of what optimization claims, and the gains
+that survive concentrate where the model had headroom.** When a
 benchmark in this space can meet the six requirements above, its rankings
 will mean something. We intend MABench's next release to be judged
 against exactly that list.
-
-## The benchmark suite
-
-The evaluation spans four benchmarks. Each ships one base seed agent plus
-literature-pattern variants of increasing scaffold complexity, so a method's
-lift has to generalize across agent shapes rather than fit one. Every result
-is a lift over the agent's *own* seed score, never over a pooled baseline.
-
-| Carrier | The task | Base | Medium | Advanced |
-|---|---|---|---|---|
-| **GPQA-Diamond** | one-shot graduate-science MCQ | CoT | Program-of-Thoughts · self-refine | multi-agent debate · Tree-of-Thoughts |
-| **τ²-bench** | tool-use dialog against a simulated user | ReAct | plan-then-act · reflect/self-correct | ReWOO · memory-scratchpad |
-| **CharXiv** | multimodal chart QA | direct VLM | crop-zoom re-query · K-sample self-consistency | PoT over the extracted table · draft→verify→revise |
-| **Terminal-Bench-2** | terminal / coding tasks in containers | minimal command loop | plan · reflect · explore | Terminus |
-
-: The four carriers and their seed agents. Seed floors are not flat — on GPQA
-alone the five seeds span 0.58 to 0.69 — which is why every lift is measured
-against the seed's own score. {#tbl-suite}
 
 <!-- Sections still to draft, likely order:
      - Faithfulness (vendored verbatim; the tuning-effort confound, owned honestly)
