@@ -247,22 +247,24 @@ with GEPA and Meta-Harness in every combination and AdaEvolve on the
 minimal seeds. @fig-anytime-meta shows all of them at once, as each run
 experienced itself:
 
-![Every run's own story of progress — rows: the two meta-models,
-columns: the three carriers. Each line is a run's best-so-far **dev**
-lift over its seed against the number of worker rollouts consumed (a
-step = the method found a new best); the open circle at the line's end
-is the **sealed** lift of that run's best checkpointed candidate. The
-dev curves climb to the edge of the snapshot in every panel — and the
-sealed circles collapse into each carrier's own noise band (shaded, ±2σ
-of re-scoring an unchanged agent on that carrier). Curves are measured
-against the seed's dev score, circles against its sealed score; runs
-that checkpointed nothing beyond their seed have a curve but no
-circle.](figures/anytime_meta.png){#fig-anytime-meta width=100%}
+![Every run's own story of progress, and where it landed — rows: the
+two meta-models; first three columns: the carriers; right margin: the
+sealed outcome. Thin lines are single runs' best-so-far **dev** lift
+over their seed against worker rollouts consumed; bold lines are the
+smoothed per-method mean (a method with one run keeps its one line).
+The right column scatters the same runs' **sealed** lifts — the best
+checkpointed candidate on the sealed split — around the 0-lift
+baseline, inside each carrier's own noise band (shaded, ±2σ of
+re-scoring an unchanged agent). Dev curves are measured against the
+seed's dev score, sealed points against its sealed score; runs that
+checkpointed nothing beyond their seed appear only as
+curves.](figures/anytime_meta.png){#fig-anytime-meta width=100%}
 
 Three things to read off the figure before any table. The curves **never
 stop climbing** — there is no plateau where the method decides it is
 done; more search buys more belief, right up to where the snapshot cuts
-off. The circles don't follow: most land inside the band, several below zero.
+off. The sealed points in the right margin don't follow: under either
+meta, most land inside their carrier's band and several below zero.
 The steepest climbs split both ways — sol's two τ² Meta-Harness runs
 claim +14 and +21pp on dev, and one keeps **+8.5pp** (a real lift, on
 the grid's weakest seed) while the other gives back everything and more
@@ -274,27 +276,28 @@ also preview the next section: τ², the one carrier where the frontier
 worker still has low floors, holds every steep climb, while on GPQA and
 CharXiv the curves themselves stay shallow. The per-method summary:
 
-| Method | cells | mean Δ dev | mean Δ sealed | survives |
+| | Claude Opus 5 meta | | GPT-5.6-sol meta | |
 |---|---:|---:|---:|---:|
-| GEPA | 17 | +7.9pp | **+0.3pp** | 4% |
-| Meta-Harness | 16 | +9.5pp | **+1.9pp** | 20% |
-| AdaEvolve | 4 | +9.6pp | **+3.4pp** | 35% |
+| **Method** | Δ dev | Δ sealed | Δ dev | Δ sealed |
+| GEPA | +8.4pp | **+1.3pp** | +7.4pp | **−0.6pp** |
+| Meta-Harness | +10.2pp | **+2.7pp** | +8.9pp | **+1.2pp** |
+| AdaEvolve | +5.7pp | **+2.5pp** | +10.9pp | **+3.7pp** |
 
-: The method axis of the frontier grid: what each method claimed on dev,
-what the seal kept, and the fraction of the claim that survived.
-AdaEvolve's four cells are all minimal-tier seeds — the easiest headroom
-in the grid — so its row is not comparable to the other
+: The method axis of the frontier grid, per meta-model: what each method
+claimed on dev and what the seal kept. AdaEvolve's cells are all
+minimal-tier seeds (one under Opus 5, three under sol) — the easiest
+headroom in the grid — so its row is not comparable to the other
 two. {#tbl-method-axis}
 
-Two things are worth taking from the table. First, the **dev column is
-flat**: every method tells the same +8-to-+10-point story about itself.
-That is the overfitting result restated per method — the dev claim
-measures selection pressure on the dev split, and selection pressure is
-roughly method-independent. Second, **no sealed mean clears the noise**.
-The ordering (Meta-Harness over GEPA) does survive swapping the
-meta-model — GEPA moves +1.3 → −0.6pp from the opus-5 meta to sol,
-Meta-Harness +2.7 → +1.2pp — but a ~1.6pp separation is far inside a
-floor whose per-cell 2σ runs 4–7pp on GPQA and τ². Of the 37 cells,
+Two things are worth taking from the table. First, the **dev columns
+are flat**: every method, under either meta, tells the same
++7-to-+11-point story about itself. That is the overfitting result
+restated per method — the dev claim measures selection pressure on the
+dev split, and selection pressure is roughly method-independent.
+Second, **no sealed mean clears the noise**. The ordering (Meta-Harness
+over GEPA) holds under both metas — the one rank statement the grid
+repeats — but a ~1.5–2pp separation is far inside a floor whose
+per-cell 2σ runs 4–7pp on GPQA and τ². Of the 37 cells,
 three clear their own carrier's bar, and all three are Meta-Harness:
 **+10.3pp and +8.5pp on the same weak τ² seed under the two different
 metas**, and +4.5pp on a CharXiv cell against that carrier's tighter
@@ -414,6 +417,84 @@ caveats rescues the dev-side numbers, though: the 0.92 dev-best claims
 are the runs' own records, and the gap between what a method believes and
 what survives the seal is the one measurement every caveat leaves intact.
 
+## AdaEvolve up close: a structural search on a noisy signal
+
+Of the four methods, AdaEvolve is the one we have taken fully apart — its
+checkpoints keep every program it wrote alongside the exact prompt its
+proposer saw, so a run can be reconstructed edit by edit. This section reads
+the frontier-worker slice (worker `gpt-5.6-luna`, meta `gpt-5.6-sol` and
+`claude-opus-5`, minimal-seed tier), and it explains a fact the tables above
+leave standing: AdaEvolve posts the largest per-method mean, yet almost all
+of that mean is one benchmark.<!-- TODO: figure — AdaEvolve best-so-far
+curve vs a permutation null, with the iteration-1/iteration-3 duplicate
+marked -->
+
+**What kind of edit pays — the question posed below in "reading each method"
+— has a clean answer: genuine structure, not prompt strings hiding in
+code.** AdaEvolve's winning τ² program grew from 12 to 156 lines by
+*deleting* the hand-written prompt prose and replacing it with runtime
+machinery — a regex-built "high-risk clause index" over whatever policy the
+task passes in, and a sanitized task capsule whose blocklist explicitly
+refuses the oracle fields (`expected_actions`, `reward`, `initial_state`).
+Not one instance-specific string anywhere. Its CharXiv winner is the same
+shape: a draft pass plus a skeptical second "auditor" pass over six
+overlapping crops. So AdaEvolve is not a prompt optimizer with a compiler's
+reach — when it works, it is editing control flow.
+
+**The catch is that the signal it climbs is noisier than the steps it
+takes.** AdaEvolve keeps only its current best program as the parent to beat
+— a champion hill-climb (the parent is the global best in 95–98% of
+iterations). On GPQA and CharXiv the accepted improvements are almost all
+worth a single train task, while one evaluation of the training split
+carries a standard error of roughly two to three tasks — so on those two
+benchmarks the hill it climbs is hard to separate from the order statistic
+of its own eval noise. The sharpest illustration: on GPQA the run's one
+genuine change landed at iteration 1 — a prompt rewrite worth about +2–3
+test points — and the "accepted improvement" three iterations later, scoring
+0.954, is byte-identical (same content hash) to that iteration-1 program. It
+was a single lucky evaluation of code whose five re-scores span 0.892–0.954,
+and that noise peak then stood as the unbeatable parent for 290 of the
+remaining 297 iterations. The proposer never learned otherwise, because it
+is fed scalars only: across all 353 stored proposer prompts the "previous
+attempts" field reads *"No previous attempts yet."* every time, and not one
+response references a task id. Selection pressure, not information, is the
+whole feedback loop.
+
+**Where it does work, the direction comes from the proposer's prior, not the
+scores.** τ² is the exception, and it is diagnostic. There the run is
+genuinely directed — monotone dev gains (0.576 → 0.739), compounding
+structural rewrites, and records that arrive *later* than any reshuffle of
+the same scores (a real upward trend, not noise-peak capture). But the
+direction did not come from the scores, which are the same bare scalar as
+everywhere else — it came from what the proposer thought to try.
+`gpt-5.6-sol` proposed reading the task metadata in 35 of 74 proposals on
+that seed and found the capsule; `claude-opus-5` proposed it 3 times in 65
+on the identical seed and never did. That single difference in prior is the
+largest outcome swing in the sweep — and the τ² program is also the most
+portable artifact in the grid, gaining +6.1 under luna and **+13.3** when
+that same frozen program is re-scored with the worker swapped down to
+`haiku-4.5`: the weaker worker benefits *more* from a scaffold it was never
+tuned against.
+
+**And removing dev selection does not remove the winner's curse — it
+relocates it to train.** AdaEvolve is the one method that never selects on
+dev at all; it ranks candidates on train fitness only, which makes it the
+clean test of whether the dev→test gap is really about the dev split. It is
+not. On CharXiv the winner is impeccably structural — the crop-and-audit
+pipeline, zero memorized content — and still lost 4.0 points on the sealed
+test: its train fitness had climbed from 0.794 to a nominal 0.853 through
+accepted steps at iterations 1–3, 15, 27 and 62, but re-scoring that same
+champion at the end of the run returned 0.809. Most of the climb was eval
+noise the search had banked as progress. Whatever split supplies the
+selection signal absorbs the overfit — dev for the dev-selecting methods,
+train for this one.
+
+The one-line read: AdaEvolve makes the most generalizable edits in the
+sweep when a structural idea happens to live in its proposer's prior, and
+spends most of the rest of its budget climbing noise. Its expected value is
+dominated by run-to-run variance — the same method produced the grid's
+largest single transfer and a 297-iteration dead stall.
+
 ## The analyses to come
 
 The grid is still filling in, so the rest of the results are written here
@@ -438,14 +519,11 @@ are methods doing a competent search over the wrong surface.
 
 Per method, the mechanism-specific question each trace should answer:
 
-- **AdaEvolve** — it edits the agent's source, and it posts the largest
-  per-method mean in both the haiku sweep and the frontier grid, each
-  time on the fewest cells. The question is *what kind* of edit is paying: control-flow
-  changes, or prompt strings that happen to live in code? Diff every
-  accepted candidate against its parent and classify the hunks. If the
-  gains are mostly embedded-prompt edits, AdaEvolve is a prompt optimizer
-  with a compiler's reach — worth knowing before crediting "code
-  evolution."
+- **AdaEvolve** — answered above in *AdaEvolve up close*: the edits are
+  genuine structure, not embedded-prompt strings, so "code evolution" is
+  the right label — but on GPQA and CharXiv the hill it climbs is largely
+  its own eval noise, and its one real win (τ²) traces to the proposer's
+  prior rather than to the scores.
 - **GEPA** — reflective prompt evolution with Pareto-based selection. The
   check: does the Pareto frontier stay diverse or collapse into one
   lineage, and do successive reflections compound (each diff builds on
