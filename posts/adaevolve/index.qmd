@@ -1,0 +1,97 @@
+---
+title: "AdaEvolve up close: a structural search on a noisy signal"
+subtitle: "The most generalizable edits in the sweep when a structural idea lives in the proposer's prior — and a hill-climb on eval noise when it doesn't."
+date: "2026-08-13"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, evaluation, analysis, method-deep-dive]
+draft: false
+---
+
+A companion deep-dive to the main MABench evaluation,
+[*Machines Improving Agents*](../the-benchmark/index.qmd). MABench hands an
+optimization method a copy of a seed agent and a metered budget; the method
+checkpoints whatever it thinks is its best, and only those checkpoints are
+scored — later, on a **sealed** test split it never sees. Everything here is
+the *frontier-worker slice* of the grid: worker `gpt-5.6-luna`, meta model
+`gpt-5.6-sol` or `claude-opus-5`, with every lift measured as Δ over the
+seed's own genesis. Keep the noise floor in mind — one full eval's
+run-to-run spread is a few points, so a lift smaller than that is
+indistinguishable from re-scoring an unchanged agent (the
+[main post](../the-benchmark/index.qmd) reports the exact floor).
+
+Of the four methods, AdaEvolve is the one we have taken fully apart — its
+checkpoints keep every program it wrote alongside the exact prompt its
+proposer saw, so a run can be reconstructed edit by edit. AdaEvolve ran only
+on the minimal-seed tier here, and this post explains a fact the
+[main evaluation](../the-benchmark/index.qmd)'s tables leave standing: across
+the frontier-worker grid AdaEvolve posts the largest per-method mean, yet
+almost all of that mean is one benchmark.<!-- TODO: figure — AdaEvolve
+best-so-far curve vs a permutation null, with the iteration-1/iteration-3
+duplicate marked -->
+
+**What kind of edit pays — the question MABench poses of every method — has
+a clean answer: genuine structure, not prompt strings hiding in code.**
+AdaEvolve's winning τ² program grew from 12 to 156 lines by *deleting* the
+hand-written prompt prose and replacing it with runtime machinery — a
+regex-built "high-risk clause index" over whatever policy the task passes in,
+and a sanitized task capsule whose blocklist explicitly refuses the oracle
+fields (`expected_actions`, `reward`, `initial_state`). Not one
+instance-specific string anywhere. Its CharXiv winner is the same shape: a
+draft pass plus a skeptical second "auditor" pass over six overlapping crops.
+So AdaEvolve is not a prompt optimizer with a compiler's reach — when it
+works, it is editing control flow.
+
+**The catch is that the signal it climbs is noisier than the steps it
+takes.** AdaEvolve keeps only its current best program as the parent to beat
+— a champion hill-climb (the parent is the global best in 95–98% of
+iterations). On GPQA and CharXiv the accepted improvements are almost all
+worth a single train task, while one evaluation of the training split
+carries a standard error of roughly two to three tasks — so on those two
+benchmarks the hill it climbs is hard to separate from the order statistic
+of its own eval noise. The sharpest illustration: on GPQA the run's one
+genuine change landed at iteration 1 — a prompt rewrite worth about +2–3
+test points — and the "accepted improvement" three iterations later, scoring
+0.954, is byte-identical (same content hash) to that iteration-1 program. It
+was a single lucky evaluation of code whose five re-scores span 0.892–0.954,
+and that noise peak then stood as the unbeatable parent for 290 of the
+remaining 297 iterations. The proposer never learned otherwise, because it
+is fed scalars only: across all 353 stored proposer prompts the "previous
+attempts" field reads *"No previous attempts yet."* every time, and not one
+response references a task id. Selection pressure, not information, is the
+whole feedback loop.
+
+**Where it does work, the direction comes from the proposer's prior, not the
+scores.** τ² is the exception, and it is diagnostic. There the run is
+genuinely directed — monotone dev gains (0.576 → 0.739), compounding
+structural rewrites, and records that arrive *later* than any reshuffle of
+the same scores (a real upward trend, not noise-peak capture). But the
+direction did not come from the scores, which are the same bare scalar as
+everywhere else — it came from what the proposer thought to try.
+`gpt-5.6-sol` proposed reading the task metadata in 35 of 74 proposals on
+that seed and found the capsule; `claude-opus-5` proposed it 3 times in 65
+on the identical seed and never did. That single difference in prior is the
+largest outcome swing in the sweep — and the τ² program is also the most
+portable artifact in the grid, gaining +6.1 under luna and **+13.3** when
+that same frozen program is re-scored with the worker swapped down to
+`haiku-4.5`: the weaker worker benefits *more* from a scaffold it was never
+tuned against.
+
+**And removing dev selection does not remove the winner's curse — it
+relocates it to train.** AdaEvolve is the one method that never selects on
+dev at all; it ranks candidates on train fitness only, which makes it the
+clean test of whether the dev→test gap is really about the dev split. It is
+not. On CharXiv the winner is impeccably structural — the crop-and-audit
+pipeline, zero memorized content — and still lost 4.0 points on the sealed
+test: its train fitness had climbed from 0.794 to a nominal 0.853 through
+accepted steps at iterations 1–3, 15, 27 and 62, but re-scoring that same
+champion at the end of the run returned 0.809. Most of the climb was eval
+noise the search had banked as progress. Whatever split supplies the
+selection signal absorbs the overfit — dev for the dev-selecting methods,
+train for this one.
+
+The one-line read: AdaEvolve makes the most generalizable edits in the
+sweep when a structural idea happens to live in its proposer's prior, and
+spends most of the rest of its budget climbing noise. Its expected value is
+dominated by run-to-run variance — the same method produced the grid's
+largest single transfer and a 297-iteration dead stall.

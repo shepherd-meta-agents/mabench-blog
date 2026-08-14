@@ -1,0 +1,94 @@
+---
+title: "Meta-Harness up close: diagnosis isn't the bottleneck"
+subtitle: "The grid's most sample-efficient searcher and best diagnostician — held back by the selector, not by how it reads the traces."
+date: "2026-08-13"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, evaluation, analysis, method-deep-dive]
+draft: false
+---
+
+A companion deep-dive to the main MABench evaluation,
+[*Machines Improving Agents*](../the-benchmark/index.qmd). MABench hands an
+optimization method a copy of a seed agent and a metered budget; the method
+checkpoints whatever it thinks is its best, and only those checkpoints are
+scored — later, on a **sealed** test split it never sees. Everything here is
+the *frontier-worker slice* of the grid: worker `gpt-5.6-luna`, meta model
+`gpt-5.6-sol` or `claude-opus-5`, with every lift measured as Δ over the
+seed's own genesis. Keep the noise floor in mind — one full eval's
+run-to-run spread is a few points, so a lift smaller than that is
+indistinguishable from re-scoring an unchanged agent (the
+[main post](../the-benchmark/index.qmd) reports the exact floor).
+
+Meta-Harness reads the agent's failures and rewrites the harness around a
+fixed worker. On the frontier-worker slice it is the grid's sample-efficiency
+frontier: it reaches equal-or-better best-dev with 5–10× fewer candidates
+than GEPA — sol's GPQA-medium run hit dev 0.905 in 34 candidates for \$42,
+against GEPA's 197 candidates and \$59 for 0.891 — usually finds its winner
+by half-budget, then plateaus. And unlike a prompt evolver, the surface it
+edits is architectural, not textual.<!-- TODO: figure — MH vs GEPA
+candidates-to-best-dev, and the τ² abstraction-vs-enumeration pair -->
+
+**What it edits is structure.** On GPQA its winner threw out the one-call
+solver and rebuilt the worker into a three-call blind ensemble with an
+adjudicator told that "neither candidate is authoritative and agreement is
+not evidence"; the prompt stayed tiny, and what it learned from the training
+traces was distilled into failure-mode heuristics that carry no answers ("do
+not assume an electric dipole when symmetry can cancel it"). On the very
+cell where [GEPA memorized the train set](../gepa/index.qmd) and lost 4
+points, Meta-Harness gained **+4.0** — same worker, same budget, opposite
+outcome, because it changed the machine rather than the crib sheet.
+
+**But whether that structure transfers hinges on one thing: does the
+proposer abstract the failure, or transcribe it?** τ² gives the cleanest
+natural experiment in the grid — the same method, the same ~3× prompt
+growth, the same trace-mining loop, applied to two seeds, with opposite
+results:
+
+- *strong seed, +8.5 test:* the failures it read were compiled into
+  domain-general invariants — "transaction recovery is part of completion…
+  use fresh tool evidence, select the user's already-stated fallback"; "a
+  rejected upgrade never cancels an authorized baggage change."
+- *medium seed, −7.3 test:* the same kind of trace evidence was enumerated
+  into scenario-shaped micro-patches keyed to named rollouts — "retail:104
+  failed on several cross-order item actions", "airline:20 quoted a \$351
+  upgrade but the mutation charged \$1,200" — hardening into rules pinned to
+  the exact situations it had seen.
+
+The two differ only in abstraction level, and **the dev split could not tell
+them apart**: the winning candidate scored 0.6909 against a runner-up's
+0.6848, well inside one standard error. Trace access is Meta-Harness's real
+edge — it finds *causes* where a score-only method sees only directions —
+and also its risk, because a cause can be written down as a general
+mechanism or as a lookup keyed to the instance that produced it, and both
+raise the dev number identically.
+
+**And the diagnosis is not the binding constraint — the selector is.**
+Roughly 80% of the proposer's proposals cite specific trace evidence:
+explicit rollout ids, or quantified failure statistics like "verify fired on
+56 traces and changed the answer zero times." Yet grounded proposals score
+no better on dev than ungrounded ones — in three of four analyzed runs the
+grounded mean is flat-to-slightly-lower. The method is already reading the
+traces well. What it lacks is a selection signal that can tell an abstracted
+fix from a transcribed one — exactly the gap the
+[main evaluation](../the-benchmark/index.qmd) keeps hitting.
+
+**Robustness is part of the result, not a footnote.** The two meta models
+run the same method very differently. Opus reads like an investigator — 3.3
+hours of proposer time on one GPQA cell, re-reading old rollouts and writing
+throwaway Python to quantify a mechanism before touching a candidate — at
+\$28.53 of meta spend, and on CharXiv more meta dollars than all the
+evaluation combined. Sol runs the same loop in 18 minutes for \$5.10 by
+bulk-dumping every candidate's source in one command — which is exactly what
+killed it: that single giant exec crashed 7 of its 18 GPQA-strong proposer
+sessions and aborted all three of its CharXiv runs outright, while opus
+completed 40 of 40 on both tiers. Neither cost nor caution bought a
+sealed-test gain that clears the noise — but a method×model pair that
+crashes 40% of its sessions has a different expected value than its
+completed-run mean advertises, and that failure rate belongs next to the Δ.
+
+The one-line read: Meta-Harness is the most sample-efficient searcher in the
+grid and the best diagnostician, rebuilding worker architecture from
+correctly-read failures — and it still can't reliably bank a sealed-test
+lift, because the dev signal it selects on cannot distinguish the invariant
+it should keep from the instance-patch it should throw away.

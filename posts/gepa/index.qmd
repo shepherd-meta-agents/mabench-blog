@@ -1,0 +1,46 @@
+---
+title: "GEPA up close: when reflection turns into a lookup table"
+subtitle: "How a reflective prompt evolver degenerates into verbatim memorization on extractable-content benchmarks — and the one time it didn't."
+date: "2026-08-13"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, evaluation, analysis, method-deep-dive]
+draft: false
+---
+
+A companion deep-dive to the main MABench evaluation,
+[*Machines Improving Agents*](../the-benchmark/index.qmd). MABench hands an
+optimization method a copy of a seed agent and a metered budget; the method
+checkpoints whatever it thinks is its best, and only those checkpoints are
+scored — later, on a **sealed** test split it never sees. Everything here is
+the *frontier-worker slice* of the grid: worker `gpt-5.6-luna`, meta model
+`gpt-5.6-sol` or `claude-opus-5`, with every lift measured as Δ over the
+seed's own genesis. Keep the noise floor in mind — one full eval's
+run-to-run spread is a few points, so a lift smaller than that is
+indistinguishable from re-scoring an unchanged agent (the
+[main post](../the-benchmark/index.qmd) reports the exact floor).
+
+GEPA is the reflective prompt evolver: it reads a failing minibatch, writes a
+reflection, mutates the prompt, and keeps a Pareto frontier of candidates. On
+the frontier-worker slice it is the grid's most prolific searcher — and its
+most frequent memorizer. *(Draft — being written up from the run-anatomy
+findings.)*
+
+<!-- TODO: fill from findings/analysis/gepa-run-anatomy.md + the GEPA section
+of findings/analysis/method-natures.md. Beats to cover:
+  - Search signature: the most candidates (66–524) and most dev reads
+    (26–234) in the grid; eval-dominated spend.
+  - Shape of a run: one cheap early jump, then a long plateau; best-dev moves
+    in only 1–5 discrete jumps; winner timing is a lottery (8%–90% of budget).
+  - Core pathology — acceptance ≠ improvement: the 8-item minibatch gate
+    barely filters; derailed memorizers accept 94–98% of proposals; the
+    "winner" is an order statistic over 200+ near-tied candidates.
+  - Defining artifact: sol GPQA-minimal SYSTEM.txt grown 27 → 1,656 words
+    (~60×) into a cheat-sheet of verbatim solved train instances → −4.0 test.
+  - Early predictors: ≥10 verbatim train 8-grams by 10% of budget ⇒
+    zero-or-negative test in every GPQA/CharXiv run; early acceptance rate is
+    the cleanest derailment flag (computable live).
+  - Recovery: never within a lineage, but branch-level recovery is real — in
+    17/17 runs the winner does not descend from the most-bloated candidate.
+  - The one real win (τ²-strong, +6.1): a bug-fix, not a better prompt — five
+    reflections chipping away a harmful plan-then-act instruction. -->
