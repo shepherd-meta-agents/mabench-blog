@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""The worker-axis bars for "headroom is the method's whole paycheck":
-every valid GPQA cell in the evaluation as one bar — sealed lift over the
-seed — grouped by worker (the frontier worker split by meta-model), colored
-by method. The shaded band is ±2σ of re-scoring an unchanged agent.
-The story: the only bars that clear the band sit on the weak workers'
-weakest seeds; the frontier worker's bars hug zero under both metas.
+"""The worker-axis bars for "headroom is the method's whole paycheck",
+maximally plain version: three workers on GPQA, two bars each — what the
+methods claimed on dev (mean best-dev lift over the seed) and what the
+sealed test kept (mean sealed lift). Same Opus-5-class meta throughout
+(the Haiku sweep ran Opus 4.8; indistinguishable in our experiments);
+the sol-meta replication is in the text, not the figure.
 
+Cells need dev_best + genesis + sealed lift to pair the two bars, so the
+null-control runs (which never propose a candidate) drop out here.
 Reads aggregates only, from the blog-data assembly (safe for the public repo).
 Regenerate: /tmp/.viztest-venv/bin/python make_worker_axis.py
 """
@@ -21,35 +23,17 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 CELLS = os.path.expanduser("~/mab2-runs/blog-data/cells.csv")
 NOISE_2SIGMA = 4.2            # pp; 2 x sd of re-scoring an unchanged agent
-METHODS = [("gepa", "GEPA", "#2563eb"),
-           ("mh", "Meta-Harness", "#c2571a"),
-           ("adaevolve", "AdaEvolve", "#0f766e"),
-           ("aflow", "AFlow", "#7c3aed"),
-           ("null", "null control", "#94a3b8")]
-COLOR = {k: c for k, _, c in METHODS}
-ORDER = {k: i for i, (k, _, _) in enumerate(METHODS)}
-TIERS = {"minimal": 0, "medium": 1, "strong": 2, "oss-120b": 0}
+DEV_COLOR, TEST_COLOR = "#93c5fd", "#1d4ed8"
+WORKERS = [("gpt-oss-120b", "GPT-OSS-120B", "weak"),
+           ("haiku-4-5", "Haiku 4.5", "middle"),
+           ("gpt-5.6-luna", "GPT-5.6-luna", "frontier")]
 
 plt.rcParams.update({
-    "font.family": "DejaVu Sans", "font.size": 10.5,
+    "font.family": "DejaVu Sans", "font.size": 11,
     "axes.edgecolor": "#cbd5e1", "axes.linewidth": 0.8,
     "figure.facecolor": "white", "savefig.facecolor": "white",
     "savefig.bbox": "tight", "savefig.dpi": 200,
 })
-
-
-def group_of(r):
-    if r["worker"] == "gpt-oss-120b":
-        return 0
-    if r["worker"] == "haiku-4-5":
-        return 1
-    return 2 if "opus" in r["meta"] else 3
-
-
-GROUPS = ["GPT-OSS-120B\nmeta: Opus 5",
-          "Haiku 4.5\nmeta: Opus 4.8",
-          "GPT-5.6-luna\nmeta: Opus 5",
-          "GPT-5.6-luna\nmeta: GPT-5.6-sol"]
 
 
 def collect():
@@ -57,69 +41,54 @@ def collect():
     with open(CELLS) as fh:
         for r in csv.DictReader(fh):
             if (r["bench"] != "gpqa" or r["invalid"] == "True"
-                    or r["basis"] == "unsealed" or not r["lift_pp"]
-                    or not r["genesis_test"]):
+                    or r["basis"] == "unsealed" or r["source"] == "sol-luna"
+                    or not r["lift_pp"] or not r["genesis_test"]
+                    or not r["dev_best"]):
                 continue
-            recs.append({"group": group_of(r), "method": r["method"],
-                         "tier": r["tier"], "seed": int(r["seed"]),
-                         "floor": float(r["genesis_test"]),
-                         "lift": float(r["lift_pp"])})
+            floor = float(r["genesis_test"])
+            recs.append({"worker": r["worker"], "floor": floor,
+                         "dev": (float(r["dev_best"]) - floor) * 100,
+                         "test": float(r["lift_pp"])})
     return recs
 
 
 def main():
     recs = collect()
-    fig, ax = plt.subplots(figsize=(9.6, 4.3))
-
-    # bar positions: consecutive within a group, a gap between groups
-    x = 0.0
-    centers, spans = [], []
-    for g in range(4):
-        sel = sorted((r for r in recs if r["group"] == g),
-                     key=lambda r: (ORDER[r["method"]],
-                                    TIERS.get(r["tier"], 9), r["seed"]))
-        x0 = x
-        for r in sel:
-            r["x"] = x
-            x += 1.0
-        centers.append((x0 + x - 1.0) / 2)
-        spans.append((min(r["floor"] for r in sel), max(r["floor"] for r in sel)))
-        clear = sum(1 for r in sel if abs(r["lift"]) > NOISE_2SIGMA)
-        print(f"{GROUPS[g].splitlines()[0]:>14}: n={len(sel)}  "
-              f"mean {mean(r['lift'] for r in sel):+5.1f}pp  "
-              f"outside 2σ: {clear}/{len(sel)}  "
-              f"floor {spans[g][0]:.2f}–{spans[g][1]:.2f}")
-        x += 1.6
+    fig, ax = plt.subplots(figsize=(8.0, 4.2))
 
     ax.axhspan(-NOISE_2SIGMA, NOISE_2SIGMA, color="#94a3b8", alpha=0.13, zorder=0)
     ax.axhline(0, color="#334155", lw=0.9, zorder=1)
-    for r in recs:
-        if r["lift"] == 0:   # zero lift is a result, not a hole: flat cap at 0
-            ax.plot([r["x"] - 0.41, r["x"] + 0.41], [0, 0],
-                    color=COLOR[r["method"]], lw=2.2, zorder=4,
-                    solid_capstyle="butt")
-        else:
-            ax.bar(r["x"], r["lift"], width=0.82, color=COLOR[r["method"]],
-                   alpha=0.9, edgecolor="white", lw=0.5, zorder=3)
-    for g in range(1, 4):
-        left = min(r["x"] for r in recs if r["group"] == g) - 1.3
-        ax.axvline(left, color="#e2e8f0", lw=0.8, zorder=0)
 
-    ax.set_xticks(centers)
-    ax.set_xticklabels([f"{lbl}\nseed floor {lo:.2f}–{hi:.2f}"
-                        for lbl, (lo, hi) in zip(GROUPS, spans)], fontsize=8.8)
+    labels = []
+    for g, (wkey, wlabel, tier) in enumerate(WORKERS):
+        sel = [r for r in recs if r["worker"] == wkey]
+        dev, test = mean(r["dev"] for r in sel), mean(r["test"] for r in sel)
+        lo, hi = min(r["floor"] for r in sel), max(r["floor"] for r in sel)
+        ax.bar(g - 0.2, dev, width=0.38, color=DEV_COLOR, zorder=3)
+        ax.bar(g + 0.2, test, width=0.38, color=TEST_COLOR, zorder=3)
+        for x, v in ((g - 0.2, dev), (g + 0.2, test)):
+            ax.annotate(f"{v:+.1f}", xy=(x, v), xytext=(0, 3),
+                        textcoords="offset points", ha="center",
+                        fontsize=9.5, color="#334155")
+        labels.append(f"{wlabel}\n{tier} · seed {lo:.2f}–{hi:.2f} · n={len(sel)}")
+        print(f"{wlabel:>14}: n={len(sel)}  dev {dev:+5.1f}pp  "
+              f"sealed {test:+5.1f}pp  floor {lo:.2f}–{hi:.2f}")
+
     ax.annotate("±2σ of re-scoring an\nunchanged agent",
-                xy=(x - 1.6, NOISE_2SIGMA), xytext=(-2, 4),
+                xy=(2.42, NOISE_2SIGMA), xytext=(0, 4),
                 textcoords="offset points", ha="right",
                 fontsize=8, color="#64748b")
 
     from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(color=c, label=l) for _, l, c in METHODS],
-              loc="upper right", fontsize=8.5, frameon=False,
-              handlelength=1.2, handleheight=1.0, labelspacing=0.35)
+    ax.legend(handles=[Patch(color=DEV_COLOR, label="claimed on dev"),
+                       Patch(color=TEST_COLOR, label="kept on sealed test")],
+              loc="upper right", fontsize=9.5, frameon=False,
+              handlelength=1.2, handleheight=1.0, labelspacing=0.4)
 
-    ax.set_xlim(-1.2, x - 0.4)
-    ax.set_ylabel("sealed lift over the seed (pp)")
+    ax.set_xlim(-0.6, 2.6)
+    ax.set_xticks(range(3))
+    ax.set_xticklabels(labels, fontsize=8.8)
+    ax.set_ylabel("mean lift over the seed (pp)")
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(color="#eef2f6", zorder=0, axis="y")
     ax.set_axisbelow(True)
