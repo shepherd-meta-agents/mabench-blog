@@ -71,34 +71,17 @@ coding tasks) — each shipping a base seed agent plus harder scaffolded
 variants, so a method's lift has to generalize across agent shapes rather than
 fit one. What follows is the evidence.
 
-## Headroom shapes what optimization can recover
+## The base model decides how much optimization helps
 
-One thing predicts whether optimization banks a real gain better than the
-choice of method does: how much room the starting agent had to improve — its
-*headroom*. Our main sweep runs on a strong frontier worker; cut its results
-by headroom rather than by method (@tbl-headroom). Where that worker already
-scores high — GPQA, CharXiv, most tasks — nothing survives the seal
-under either optimizer model, however much dev climbs. The exception is τ², the
-one carrier where the frontier worker still starts weak: there, on its
-lowest-floor seed, Meta-Harness posts the only two frontier lifts that reach
-the bar — one under each optimizer model. Lift tracks the floor, not the
-method.
-
-| carrier (frontier `gpt-5.6-luna` worker) | seed floor | what the seal keeps |
-|---|---|---|
-| GPQA | 0.83–0.90 | ~0, both models |
-| CharXiv | 0.69–0.73 | ~0 |
-| τ² (weakest seed) | 0.43 | **+8.5pp / +10.3pp** (the two models) |
-
-: The frontier grid re-cut by headroom. The only surviving lifts sit on the
-one carrier where the frontier worker is still weak. {#tbl-headroom}
-
-A middle-strength worker completes the gradient, and @fig-worker-axis is the
-whole finding in one picture: as the worker strengthens, what the seal keeps
-falls monotonically, until at the frontier even the *claim* sits inside the
-noise. The same monotonicity holds within a single worker — luna's τ² seeds
-fall from a real lift to nothing as their floors rise. Headroom, not model or
-method, is the variable that decides whether optimization banks anything.
+The biggest lever on whether meta-optimization does anything is not the
+method — it is the base model underneath. Hold the protocol, the methods, and
+the budget fixed, swap the worker the agent runs on, and the whole picture
+reorganizes: on a weaker model the optimizers find real failures to fix and
+the gains survive a sealed test; on a strong frontier model the same search
+buys almost nothing that clears the noise — with one telling exception, τ²,
+the single task where even a frontier model still starts weak. @fig-worker-axis
+is the gradient in one picture — as the worker strengthens toward the frontier, the lift the seal
+keeps falls steadily toward zero.
 
 ![The worker axis on GPQA, reduced to the two numbers that matter: per worker
 (weakest to frontier), what the methods claimed on dev (light) and what the
@@ -109,22 +92,34 @@ unchanged agent; dev bars are measured against the seed's sealed score, so
 read them as directional. What the seal keeps falls as the worker
 strengthens.](figures/worker_axis.png){#fig-worker-axis width=92%}
 
-Three details make the pattern more than an artifact. It is model-independent: swapping the
-optimizer's model changes nothing about where lift is possible, and the one
-real frontier lift was found by both. The noise floor replicates across
-workers, so the frontier null is not an artifact of one cheap model. And the
-pattern is monotone in headroom, both across workers and within a single one.
+The field sees the same shape: Evo-Bench [@evobench] reports its largest gains
+where the base harness is weak and the model underexploited — the weak-worker
+regime again.
 
-Put the slices together and the field's headline numbers line up rather than
-conflict. Evo-Bench [@evobench] reports its largest gains exactly where the
-base harness is weak and the model underexploited — the same corner our
-weak-worker slices light up. There is no contradiction: **program-space search
-mostly recovers headroom the model already had, rather than adding capability
-it lacked.** A corollary runs the introduction's "optimizer-is-a-model-too"
-argument the other way: every model release upgrades the thing doing the
-improving, but also *shrinks the thing being harvested*. On the tasks where
-the frontier worker is already strong — most tasks, increasingly — there is
-little left for these methods to collect.
+Two things say the gradient is real, not an artifact of measurement. It is
+optimizer-independent — swapping the optimizer's model, different lab and
+architecture, leaves the frontier null unchanged, and the one real frontier
+lift is found by both. And the noise floor replicates across workers, so a
+flat result on a strong worker is a measured null, not a failure to measure.
+The decline is monotone besides: across workers, and within a single one, as
+luna's τ² seeds move from weak to strong.
+
+Why would a stronger worker be *harder* to optimize? Our working hypothesis
+points at the optimizer, not the worker. An optimizer proposes harness changes
+out of what it absorbed in training — and today's optimizers were trained
+largely on scaffold and harness code from a model generation or two ago,
+designs hand-tuned for workers weaker than the ones they now optimize. Fluent
+in what helped last year's model, the optimizer is most effective in exactly
+the regime those scaffolds came from — weaker workers — and comparatively lost
+when the worker is stronger than anything its training harnesses were written
+for. τ² fits: the winning edit there was a classic scaffold repair (removing a
+harmful plan-then-act instruction) already in the optimizer's repertoire. On
+this reading the frontier result is a lag between the optimizer's harness
+priors and the worker's capability, not a limit on what a better harness could
+do — and it is a lag the field's own trajectory should close, as optimizers
+come to be trained on scaffolds built for stronger workers. The optimizer is a
+model too; its sense of good scaffolding is the part still catching up to the
+frontier.
 
 The caveats, in full, because this is the post's strongest claim. The frontier
 batches are mid-flight snapshots, not sealed runs: every number is our own
