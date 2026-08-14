@@ -226,36 +226,22 @@ two decades ago — in a companion post:
 
 ## Calibrating lifts against the noise floor
 
-We have leaned on the word *noise* throughout — here it is, measured. This
-field is noisier than most: the worker is stochastic, the optimizer is stochastic, and so is
-*scoring itself* — re-score a frozen, unchanged agent on the same sealed
-split and a large share of items flip their verdict between repetitions. We
-measured that floor directly, by re-scoring untouched seed agents under
-identical conditions (@tbl-floor). The upshot: a single run's reported lift has to clear roughly six points
-before it can be told apart from luck, and some reported optimization gains
-fall below that.
+We have leaned on the word *noise* throughout — here is what it means,
+measured. Everything in this pipeline is stochastic: the worker, the
+optimizer, and *scoring itself* — re-score a frozen, unchanged agent on the
+same sealed split and a large share of items flip their verdict between
+repetitions. We measured that floor directly, by re-scoring untouched seed
+agents under identical conditions, and it is wide: a single run's reported
+lift has to clear roughly six points before it can be told apart from luck —
+a bar some reported optimization gains do not meet.
 
-| measured on a frozen, unchanged agent | value |
-|---|---|
-| items that flip verdict between re-scores | 20–40% |
-| run-to-run sd of one test score (GPQA, haiku worker) | 0.021 |
-| smallest lift a *single* run can show above 2σ noise | ~0.06 |
-
-: The noise floor. Per-carrier, per-worker floors used later range roughly
-0.010–0.034 in sd; the exact values are collected in the
-benchmark-requirements section. {#tbl-floor}
-
-This is not a quirk of our setup; the field is converging on the same
-diagnosis (@tbl-related).
-
-| study | setup | what they found |
-|---|---|---|
-| Gupta et al. [@nouniversalharness] | 30 harnesses × 12 model–problem pairs, 3M+ rollouts | once trials are repeated, no fixed harness is reliably superior |
-| HarnessOpt-Bench [@harnessoptbench] | 40 configs, each run twice | median round-to-round range 0.07, worst 0.36; several ranges cross zero — the two rounds disagree on whether the optimizer helped at all |
-| optimize_anything [@omni] | 3 optimizers, matched budget, 10 tasks | wins split 3–3–4; the winner flips task to task |
-
-: Independent evaluations reaching the same conclusion — differences between
-methods are often smaller than run-to-run variance. {#tbl-related}
+This is not a quirk of our setup; independent evaluations keep reaching the
+same diagnosis. Repeat the trials and no fixed harness stays reliably
+superior [@nouniversalharness]; run the same optimizer twice and the two
+rounds can disagree on whether it helped at all [@harnessoptbench]; give
+three optimizers a matched budget and the winner flips from task to task
+[@omni]. Method differences in this field are routinely smaller than
+run-to-run variance.
 
 The only honest response is repetition. Every cell in our grid is run as
 several independent repeats, and lifts are reported against the measured floor
@@ -267,12 +253,8 @@ score as repeats increase. Orange: the smallest lift distinguishable from
 noise at 2σ. The 1- and 3-repeat points are anchored by direct measurement; 5
 is the √N extrapolation.](figures/noise_floor.png){#fig-noise width=88%}
 
-When the budget runs out, the run is over, and what survives is everything the
-comparison needs and nothing the method can spin: the candidate graph, the
-checkpointed curve, the ledger, the full trace — and a floor that says how big
-a lift has to be before it means anything. That leaves the constructive
-question: what would it take to make these comparisons into a benchmark whose
-rankings hold?
+That leaves the constructive question: what would it take to make these
+comparisons into a benchmark whose rankings hold?
 
 ## Toward a reliable benchmark
 
