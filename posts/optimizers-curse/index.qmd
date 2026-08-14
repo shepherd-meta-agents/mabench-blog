@@ -1,0 +1,182 @@
+---
+title: "The Optimizer's Curse"
+subtitle: "One run of an agent optimizer, item by item: where the dev climb comes from, and why the sealed test takes it back."
+date: "2026-08-13"
+date-modified: "2026-08-14"
+author:
+  - name: "TODO — author list"
+categories: [meta-agents, evaluation, analysis]
+bibliography: references.bib
+draft: false
+---
+
+Here is one run of an agent optimizer, in two numbers. By its own logs it
+is a textbook success: across the run its best candidate's score on the
+development split climbs from 0.582 to 0.685 — +10.3 points, earned
+step by step, each new selection beating the last. Scored on a sealed
+test split the method never saw, the same candidates walk from 0.545 down
+to 0.461 — −8.5 points. **The optimizer made its agent worse, watched its
+own metric rise the whole time, and certified its worst candidate as its
+best.**
+
+Nothing about this run is broken, and that is the point. The agent's
+per-task behavior is stochastic; the dev signal averages too few samples
+of it; and **selecting the maximum of noisy estimates *manufactures*
+improvement — no real progress required** — a mechanism decision analysis
+named the **optimizer's curse** [@smith-winkler-2006] two decades before
+the first prompt optimizer existed. In this post we take that one run
+apart, item by item, and show the curse accounts for most of its claimed
+lift. The consequence generalizes well beyond this run:
+**dev-reported gains from agent optimizers are inflated by default, and a
+selection rule that ignores its own noise cannot even keep a run from
+going backwards.** This is a companion piece to [our main
+evaluation](../the-benchmark/index.qmd), where the same gap shows up
+across the whole grid.
+
+## The score climbs no matter what the agent does
+
+The run is Meta-Harness on τ²-bench (airline domain), from our frontier
+grid: a meta-agent edits the worker agent's instructions and tools, a dev
+evaluation scores each candidate on 55 tasks × 3 reps, and the best dev
+score to date decides which candidate survives. @fig-case-curve replays
+the run's eleven dev evaluations. The circled ones are its five selection
+decisions — the evaluations where the reigning best was dethroned.
+
+![The case run's dev evaluations in order. Circles mark the selection
+steps — evaluations where the running best was dethroned. The sealed test
+scores the same five selected candidates. (Candidate identity here is
+content-verified against the executed agent trees, not the run's own stamp
+labels, which carry an off-by-one.)](figures/case_curve.png){#fig-case-curve width=88%}
+
+And here is the evidence each circled decision rested on. Each wide row is
+one selected candidate's dev evaluation — one cell per task, shaded by how
+many of its three reps passed. The thin row under it is what changed at
+that selection step: green improved, red regressed.
+
+{{< include _run_anatomy.qmd >}}
+
+Two things about this run, and both are visible above:
+
+- **The dev score inflates no matter what is measured.** Every one of the
+  ten dev evaluations after the seed's — whichever candidate was on the
+  bench, kept or rejected — landed above the seed's 0.582. Meanwhile the
+  sealed test of the selected chain walks from 0.545 to 0.461. A signal that
+  flatters every candidate is not measuring the candidates.
+- **The three reps barely agree on what changed.** Each selection step
+  rests on ~30 of 55 tasks changing — in both directions at once (+17/−12,
+  +15/−13, +16/−16, +16/−12) — for a net of +2 to +8 reps out of 165. At
+  the final, decisive step (c008 → c045), not one of the 28 changes is
+  unanimous: no task went 0/3 → 3/3 or the reverse. Nothing was solved;
+  the dice moved.
+
+The climb is noise; the decline is not. A fresh 3-rep test evaluation of
+an unchanged agent moves by 2.4–3.4 points at one standard deviation, so
+a drop of 8.5 has probability at most 0.02. **The selection did not
+merely fail to find improvement — it certified a genuine regression as
+its best.**
+
+## Every measurement disagrees with itself
+
+That zero is not one run's bad luck; it is what the evidence under a
+selection decision typically looks like. Across all 41 runs in our grid
+— 2,447 pairs of successive dev evaluations — take every task the
+previous evaluation scored unanimously, 3/3 or 0/3. When such a task
+changes at the next evaluation, the reps almost never agree
+(@fig-rep-venn): 6.5% of degradations and 10.5% of improvements are
+unanimous — about four and three per comparison, so **the median
+selection decision is made without a single change all three reps agree
+on.**
+
+![Every task the previous dev evaluation scored unanimously — 3/3 correct
+(left) or 0/3 (right) — and that changed at the next evaluation, across all
+41 runs. The circles are the next evaluation's three reps; area is the share
+of instances. A change the whole evaluation agrees on would sit in the
+center — 6.5% of degradations and 10.5% of improvements do. In the median
+candidate comparison, not a single change is
+unanimous.](figures/rep_venn.png){#fig-rep-venn width=100%}
+
+How much of this churn would an *unchanged* agent produce? Give each task
+a fixed pass probability and simply re-roll its three reps: that alone
+changes ~23–26 tasks per comparison (observed: 28–32) and moves the dev
+score with a standard deviation of about 4 points. Against that null,
+every dev gain the case run acted on was indistinguishable from
+re-measuring the same agent:
+
+| step | dev Δ | z vs. unchanged agent |
+|---|---|---|
+| seed → c001 | +4.8pp | +1.1 |
+| c001 → c007 | +1.2pp | +0.3 |
+| c007 → c008 | +1.8pp | +0.5 |
+| c008 → c045 | +2.4pp | +0.6 |
+
+: The case run's four selection steps against the unchanged-agent null.
+Every dev gain the method acted on sits within 1.1σ of pure
+re-measurement noise. {#tbl-null}
+
+Nor is the case run an unlucky draw: grid-wide, 89% of the 2,447 dev
+score changes fall inside ±2σ of the same-agent null
+(@fig-grid-consistency) — a signal that mostly carried no information
+about the candidates.
+
+![Every change in dev score between successive candidate
+evaluations, all 41 frontier runs (2,447 changes): what the methods
+measured (colored) vs. what they would have measured re-scoring the
+*same unchanged agent* — each task passes with some probability, and
+3 reps × ~60 tasks re-rolls those dice (dashed). The signal the methods
+optimized on is nearly indistinguishable from the
+dice.](figures/grid_consistency.png){#fig-grid-consistency width=100%}
+
+This is where the curse closes. Replay the run with every candidate
+secretly an identical copy of the seed — one dev evaluation each, keep
+the best. Max-selection over that pure noise "earns" +5 to +7 points of
+dev climb, and reaches the observed +10.3 with probability up to 0.2.
+**Half to two-thirds of the climb was guaranteed before the method
+changed anything** — the textbook optimizer's curse
+[@smith-winkler-2006; @thaler-1988]: pick the maximum of noisy estimates,
+and the winner is inflated by construction.
+
+## The tax scales with how often you look
+
+Is the tax the same for every optimizer? No — it is priced by how often
+the method looks. Averaged over every traced run in our grid, the
+methods differ enormously in how many full dev evaluations they take a
+maximum over — AdaEvolve ~5 per run, AFlow ~22, Meta-Harness ~31, GEPA
+~94 — and the simulated tax follows, from +2.0 points for the method
+that looks least to +4.0 for the one that looks most
+(@fig-method-curse). The sealed test honors that accounting: the raw
+dev climb *misranks* the methods, while climb minus tax roughly
+recovers the sealed order — for GEPA the books balance to the decimal
+(+0.5 excess, +0.6 sealed).
+
+To be clear, the tax is a fee for looking, not a verdict on any
+method's search — where the fee lands depends on the headroom it is
+spent against. On GPQA, where no method in our grid finds real lift,
+GEPA's +3.5 climb is all tax and its sealed lift is −1.5; on CharXiv,
+where headroom exists, the same method's climb clears its tax and the
+seal pays out the difference (+1.7). **The curse doesn't say
+eval-hungry methods can't win; it says their dev climbs carry the
+largest built-in markup — and only the part above it is real.**
+(Worker and bench mixes differ per method and the ns are small — read
+the ordering, not the decimals.)
+
+![Four methods, averaged over every traced run in our grid (three
+benches, all workers), ordered by how many full dev evaluations each
+takes a maximum over. Left bar of each pair: the mean dev climb, split
+into the part selection noise alone manufactures for that run's own
+evaluation count over an *unchanged* seed (gray) and the excess above it
+(blue). Right bar: the mean sealed-test lift. The gray tax grows with how
+often the method looks; the sealed lift tracks the excess, not the
+climb.](figures/method_curse.png){#fig-method-curse width=88%}
+
+The mechanism is three beats. The optimizer's edits do move true quality
+— modestly, both ways. The dev signal, a few dozen tasks at three reps,
+is saturated by worker stochasticity and cannot rank those movements.
+And max-selection manufactures +5–7 points of paper gain while blocking
+no regression — **the run random-walks in quality while its own metric
+applauds.** The trap was named decades before the first prompt
+optimizer, in oil-lease auctions and decision analysis
+[@capen-1971; @smith-winkler-2006]; the remedies are as old: enough reps
+to resolve the difference being claimed, acceptance rules that know
+their own noise, and reading every dev-reported lift net of the tax.
+Our grid's mean claimed lifts — +8.8 points on τ², +4.4 on GPQA — are
+about what the curse hands out for free.
