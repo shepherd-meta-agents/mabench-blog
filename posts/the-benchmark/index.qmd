@@ -2,7 +2,7 @@
 title: "Machines Improving Agents: An Evaluation, Not (Yet) a Benchmark"
 subtitle: "Evaluating the machines that optimize an agent's harness — across model × harness pairs, not the model alone — under a sealed protocol, and what a real benchmark of this field would take."
 date: "2026-08-05"
-date-modified: "2026-08-13"
+date-modified: "2026-08-14"
 author:
   - name: "TODO — author list"
 categories: [meta-agents, evaluation, analysis, protocol]
@@ -22,16 +22,17 @@ worth measuring is not a model but a *model × harness* pair.
 
 ![The two axes. Progress so far has climbed the parameter wall — a training
 run per step, flattening returns. The program-space direction is open, cheap,
-and — as of roughly now — searchable by machine. The gate is model capability:
-run the same harness search from a weaker model (gray) and there is little to
-gain.](figures/two_axes.png){#fig-two-axes width=88%}
+and — as of roughly now — searchable by machine. How much that search actually
+buys, and whether it buys more from a strong model or a weak one (gray), is
+the question the rest of this post measures.](figures/two_axes.png){#fig-two-axes width=88%}
 
 For a long time, program space was searched by hand. Increasingly it is
 searched by machine: a capable model reads an agent's trajectory, diagnoses a
 failure, and rewrites the scaffold — the idea behind a fast-growing line of
-work (GEPA [@gepa], AFlow [@aflow], ADAS, the Darwin Gödel Machine). And the
-optimizer is a model too, so every release upgrades the thing that improves
-the agent, not just the agent.
+work. And the optimizer is a model too, so every release upgrades the thing
+that improves the agent, not just the agent — which also means the optimizer
+carries its own priors about what a good harness looks like, a point that
+turns out to matter.
 
 We built a fair, sealed comparison of these optimizers and ran it across four
 benchmarks and several worker models. Each optimizer gets a copy of a seed
@@ -40,8 +41,9 @@ best candidates as it goes, and only those are scored — later, by us, on a
 **sealed** test split the method never sees. Nothing grades its own homework.
 The most confident thing we can report is about the measurement, not a winner:
 **most of what an optimizer counts as improvement does not survive that sealed
-test.** The gains that clear the eval's own noise are small, and they appear
-only where the underlying model was weak to begin with. So we are publishing
+test.** The gains that do clear the eval's own noise are small, and where they
+appear depends far more on the base model underneath than on which method did
+the searching. So we are publishing
 this as an *evaluation*, not a benchmark — at today's effect sizes and noise,
 no protocol we know of (ours included) can rank these methods reliably.
 
@@ -67,7 +69,9 @@ the wider roster. We run these three across four benchmarks — **GPQA-Diamond**
 **CharXiv** (chart question-answering), and **Terminal-Bench-2** (terminal and
 coding tasks) — each shipping a base seed agent plus harder scaffolded
 variants, so a method's lift has to generalize across agent shapes rather than
-fit one. What follows is the evidence.
+fit one — and across three worker models, from a weak open-weights one up to
+the frontier, since that turns out to be the axis that matters most. What
+follows is the evidence.
 
 ## The base model decides how much optimization helps
 
