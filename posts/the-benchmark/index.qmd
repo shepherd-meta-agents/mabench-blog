@@ -29,17 +29,17 @@ and — as of roughly now — searchable by machine. The gate is model capabilit
 run the same harness search from a weaker model (gray) and there is little to
 gain.](figures/two_axes.png){#fig-two-axes width=88%}
 
-Until recently, program space was searched by hand, which is to say barely:
-harness design is a high-dimensional, gradient-free search problem, and humans
-explore it by folklore. What changed is that frontier models became good enough
-to do the searching — to read an agent's trajectory, diagnose the failure, and
-propose an edit. A field has formed around this almost overnight: prompt
-evolvers like GEPA [@gepa], workflow searchers like AFlow [@aflow], and the
-recursive-self-improvement line — ADAS, the Darwin Gödel Machine — where the
-agent rewrites its own scaffold. A new optimizer every few weeks. And if your
-instinct is that the next model release makes all of this moot — note that the
-argument cuts the other way. The optimizer is a model too. Every release
-upgrades the thing that improves the agent, not just the agent.
+For a long time, program space was searched by hand — which is to say
+barely: harness design is a high-dimensional, gradient-free search problem,
+and people explore it by folklore. The alternative is to let a capable model
+do the searching: read an agent's trajectory, diagnose the failure, propose
+an edit. That idea has been drawing steadily more attention — prompt evolvers
+like GEPA [@gepa], workflow searchers like AFlow [@aflow], and a
+recursive-self-improvement line (ADAS, the Darwin Gödel Machine) in which the
+agent rewrites its own scaffold. And if your instinct is that the next model
+release makes all of this moot, the argument cuts the other way: the
+optimizer is a model too, so every release upgrades the thing that improves
+the agent, not just the agent.
 
 It is not hard to see where this goes. If program-space search keeps
 compounding with model capability, harness design stops being artisanal:
@@ -55,20 +55,17 @@ baselines appear at all, its own reimplementation of the competition. The
 numbers never meet. A field that cannot compare its methods cannot tell whether
 it is making progress.
 
-So we built the comparison and ran it, and before describing the instrument,
-here is the one result we most want you to take away. When a machine optimizes
-an agent, it grades its progress on data it can see — and on that data,
-improvement is nearly guaranteed. Across the forty-one runs in our grid that
-used a frontier worker, the methods' own selected candidates claimed a mean
-**+4.4 points** on GPQA-Diamond, **+8.8** on τ²-bench, **+4.1** on CharXiv.
-Scored on a sealed test split the optimizer never touched, those same
-candidates kept **−0.2**, **+1.9**, and **+1.5** — and on GPQA and τ², exactly
-half the runs ended above the agent they started from at all. Nearly
-everything the optimizer believes it gained is selection pressure on a small,
-noisy dev split; the part that survives the seal sits at or barely above the
-noise of re-scoring an *unchanged* agent. That gap — between the lift a method
-reports and the lift that exists — is the finding this post is organized
-around, and the reason its title says *evaluation*, not *benchmark*.
+So we built the comparison and ran it. Before describing the instrument,
+here is the one result we most want you to take away. When a machine
+optimizes an agent, it grades its own progress on data it can see — and on
+that data, improvement is nearly guaranteed. Score the very same result on a
+sealed split the optimizer never touched, and most of that improvement is
+gone; on some carriers, whether the final agent even beats the one it started
+from is a coin flip. Almost everything the optimizer believes it gained is
+selection pressure on a small, noisy sample — not a gain that survives a
+fresh draw of items. That gap, between the lift a method reports and the lift
+that exists, is what this post is organized around, and the reason its title
+says *evaluation*, not *benchmark*.
 
 MABench is our attempt at the measuring stick. The fixed point of every
 run is a **seed agent paired with a dataset**; the thing under test is an
@@ -371,148 +368,6 @@ so the τ² hit is two runs, not a distribution. None of this touches the
 dev-side story: the dev claims are the runs' own records, and the gap between
 what a method believes and what survives the seal is what every caveat leaves
 intact.
-
-## Method deep-dives
-
-We take three of the agnostic methods fully apart in companion posts — same
-frontier-worker slice, one method each:
-
-- [**Meta-Harness: diagnosis isn't the bottleneck**](../meta-harness/index.qmd)
-  — the grid's most sample-efficient searcher rebuilds worker architecture
-  from correctly-read failure traces, yet transfer turns on whether the
-  proposer abstracts the failure or transcribes it, and the dev selector
-  can't tell the two apart.
-- [**GEPA: when reflection turns into a lookup table**](../gepa/index.qmd) —
-  the most prolific searcher and the most frequent memorizer; a permissive
-  acceptance gate lets it accrete verbatim train answers on
-  extractable-content benchmarks. *(In progress.)*
-- [**AdaEvolve: a structural search on a noisy signal**](../adaevolve/index.qmd)
-  — the most generalizable edits in the sweep when a structural idea lives in
-  the proposer's prior, and a hill-climb on eval noise when it doesn't.
-
-## The analyses to come
-
-The grid is still filling in, so the rest of the results are written here
-as protocol, not findings: for each question, what we measure, which
-artifact it reads from, and what would count as an answer. None of it
-needs new instrumentation — every analysis below runs off the record a
-run already leaves behind (the candidate graph, the checkpointed curve, the
-ledger, the sealed scores). The numbers land as the cells finish.
-
-### Reading each method on its own terms
-
-A single Δ per method compresses away the thing MABench actually records:
-*how* the lift was produced. So each method gets a post-mortem built from
-the same three artifacts — the candidate DAG (what it proposed, in what
-order, descended from what), the ledger (where its budget went: proposal
-tokens vs. evaluation rollouts), and the anytime curve (when in the
-budget the lift arrived). The strength/weakness read is the
-cross-tabulation. A method that spends most of its budget evaluating one
-deep chain is exploiting; one that fans out forty shallow candidates and
-keeps none is exploring without memory; and the most instructive failures
-are methods doing a competent search over the wrong surface.
-
-The three agnostic methods each have a companion deep-dive, linked under
-*Method deep-dives* above. The two agent-native methods have a trace but no
-write-up yet — for each, the mechanism-specific question it should answer:
-
-- **AFlow** — MCTS over operator graphs. The check: how much of the
-  operator vocabulary the search visits at this budget, and how deep the
-  tree gets before the ledger runs out — a search designed for more
-  budget than $150 should look visibly truncated, and that is a finding
-  about cost-conditionality, not a defect.
-- **HGM** — its only run is a TB2 cell with no measured floor, so it has
-  a trace but no Δ. It joins this section when the TB2 floors are
-  measured.
-
-### Generalization Gap
-
-Every run yields two lifts: Δdev — the method's chosen winner, scored on
-the split it could see — and Δtest, the same candidate on the sealed
-split it never saw. The gap between them is the single most
-policy-relevant number in the benchmark: it is the size of the haircut
-that "we improved the agent by X" takes when X was picked on the same
-data used to search. @fig-selection-scatter plots it for the 28 sealed
-runs. Not one run lands above the noise band around the
-full-transfer diagonal; nine fall below it. The mean haircut is
-**−0.058** — larger than any method's surviving lift — and it is not one
-method's pathology: GEPA gives back 0.043 of its claimed lift,
-Meta-Harness 0.075, AdaEvolve 0.047. The method that claimed the most
-gave back the most. Because the seal is structural (the method's
-interface simply never exposes test items), all of this is selection
-pressure on a noisy dev split — not leakage.
-
-![The selection gap, run by run. Each point is one sealed run: the lift
-the method claimed on dev against what survived on sealed test; color =
-method, circles = GPQA-Diamond, squares = τ²-bench. The dashed diagonal
-is full transfer; the band around it is ±2σ of eval noise. No run lands
-above the band; nine fall
-below it.](figures/selection_scatter.png){#fig-selection-scatter width=72%}
-
-### Sensitivity to initialization
-
-Three nested senses, cheapest first. *Run-to-run:* same seed, same
-method, repeated — the gpqa-3seed repeats already measure this, and the
-first question is whether a method's own spread exceeds the seed floor's
-0.021; a method noisier than the thing it optimizes cannot be ranked from
-single runs. *Seed strength:* same carrier, same method, three seed
-levels — the base/medium/advanced columns of @tbl-suite exist precisely
-for this. Does Δ shrink as the seed strengthens (headroom exhaustion), or
-grow (stronger seeds give the optimizer more structure to work with)?
-Each carrier row is a controlled comparison. *Convergence:* from
-different seeds on one carrier, do a method's final candidates converge
-on the same tricks — measured by diffing the final artifacts and by
-behavioral agreement on shared items — or is the endpoint path-dependent?
-If it converges, cheap seeds suffice and seed choice is a nuisance
-parameter; if it doesn't, "the optimized agent" is an artifact of where
-you started, and single-seed reporting is quiet cherry-picking.
-
-### Failure analysis: what makes a run fail
-
-A benchmark that reports only finished runs launders its denominator. So:
-classify every *launched* run — finished-and-lifted, finished-flat,
-crashed, budget-exhausted — and for each non-lift, read the meta-trace
-backwards to the proximate cause. The taxonomy we expect, from the runs
-so far: hard method crashes (an AdaEvolve CharXiv run in the haiku sweep
-died $1.40 in; a frontier Meta-Harness cell died at provisioning); budget exhaustion mid-search with the best
-candidate still unevaluated; degenerate proposals the method could not
-back out of (candidates scoring below seed, then selected anyway);
-and harness-fighting — malformed artifacts, contract violations, retry
-loops that burn ledger without producing candidates. Failure rates get
-reported next to Δ, per method: a +0.043 that crashes a third of the
-time is a different proposition from a +0.017 that always lands, and the
-field's habit of reporting only the first number is part of what MABench
-exists to correct.
-
-### Generalization: does an optimized candidate travel?
-
-Take each cell's winning candidate and re-evaluate it — evaluation only,
-no further search, a fraction of a run's cost — everywhere else it can
-legally run. The taxonomy from earlier sections does real work here:
-coupling class determines the shape of the matrix. Agent-agnostic
-context candidates (a GEPA prompt) can be carried to other seeds on the
-same carrier; endogenous code edits are welded to their agent and can
-only travel across datasets, not seeds. So the cross-eval matrix is
-triangular by construction, and the per-class transfer ratio —
-Δ-elsewhere over Δ-at-home — is the statistic. A method whose lift
-survives the trip has improved the agent; a method whose lift stays home
-has fit the dataset, however impressive the home number.
-
-### Browse the runs yourself
-
-Every analysis above is auditable by hand, because every run's record is
-browsable. The corpus ships with a read-only, build-free web visualizer:
-a **Leaderboard** (the comparison board with matched cost→performance),
-**Iterations** (best-so-far against budget — the anytime view),
-**Pivot** (the method × condition fingerprint heatmap), **Runs** (one
-run's anatomy: candidate graph, meta-trace, ledger), and an **Explorer**
-(a single run's proposals, exact candidate ancestry, and the evidence
-behind each accept). Every view carries its state in the URL — facets,
-held conditions, even a specific seed-vs-candidate diff — so any figure
-in this post can be linked as the interactive view it was cut from.
-A public instance of the run visualizer is coming soon.<!-- TODO:
-local-only preview at http://127.0.0.1:8765/ — swap in the public
-deployment URL when it is live -->
 
 ## What a reliable benchmark would take
 
