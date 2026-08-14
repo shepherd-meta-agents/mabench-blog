@@ -45,16 +45,30 @@ only where the underlying model was weak to begin with. So we are publishing
 this as an *evaluation*, not a benchmark — at today's effect sizes and noise,
 no protocol we know of (ours included) can rank these methods reliably.
 
-We evaluate three of these methods — **GEPA**, which evolves an agent's
-prompts; **Meta-Harness**, which rewrites the code of the scaffold around a
-fixed agent; and **AdaEvolve**, which evolves the agent's program itself: one
-prompt-surface method and two program-surface ones, each taking an arbitrary
-seed agent and returning an improved version of it. We run them across four
-benchmarks — **GPQA-Diamond** (graduate-science multiple choice), **τ²-bench**
-(tool-use dialogue), **CharXiv** (chart question-answering), and
-**Terminal-Bench-2** (terminal and coding tasks) — each shipping a base seed
-agent plus harder scaffolded variants, so a method's lift has to generalize
-across agent shapes rather than fit one. What follows is the evidence.
+These methods vary along two axes: the **surface** they edit — an agent's
+*context* (prompts, skills, memories) or its *program* (code, control flow,
+the workflow graph) — and their **coupling** to the agent, where *agnostic*
+methods improve any seed you hand them, *exogenous* ones design their own
+artifact from scratch, and *endogenous* ones *are* the agent, rewriting
+themselves. Every published family lands in one cell.
+
+| coupling ↓ · surface → | **context** — prompts · skills · memories | **program** — code · control flow · graphs |
+|---|---|---|
+| **agnostic** — improves any seed agent | prompt optimization: **GEPA** · TRIPLE · CAPO | coding-agent search: **Meta-Harness** · CRO · **AdaEvolve** |
+| **exogenous** — a separate designer, its own representation | *open cell — no published method* | automated agent design: ADAS · GPTSwarm · AFlow · MaAS |
+| **endogenous** — the agent rewrites itself | self-evolving skills & memory: Hermes | self-evolving agents: DGM · HGM · SICA · STOP · Gödel-Agent |
+
+: The taxonomy of meta-optimization methods. The three we evaluate here are in **bold**. {#tbl-taxonomy}
+
+**We evaluate three of these methods** — **GEPA** (agnostic prompt
+optimization), plus **Meta-Harness** and **AdaEvolve** (agnostic coding-agent
+search) — each of which takes an arbitrary seed agent and returns an improved
+version of it. We run them across four benchmarks — **GPQA-Diamond**
+(graduate-science multiple choice), **τ²-bench** (tool-use dialogue),
+**CharXiv** (chart question-answering), and **Terminal-Bench-2** (terminal and
+coding tasks) — each shipping a base seed agent plus harder scaffolded
+variants, so a method's lift has to generalize across agent shapes rather than
+fit one. What follows is the evidence.
 
 ## Headroom shapes what optimization can recover
 
